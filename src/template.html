@@ -5,7 +5,7 @@
 	}
 	::highlight(__HIGHLIGHT_ONE_ID__) {
 		color: black;
-		background: orange;
+		background: darkorange;
 	}
 	__CUSTOM_ELEMENT_NAME__[hidden] {
 		/* in case of interference from badly behaved page styles (looking at you us04web.zoom.us) */
@@ -37,7 +37,7 @@
 			border-style: none none solid solid;
 			border-radius: 0 0 0 var(--border-radius);
 
-			label {
+			.label {
 				display: flex;
 				flex-direction: column;
 			}
@@ -73,8 +73,7 @@
 
 				.flags:not([hidden]) {
 					display: flex;
-					gap: 0.3rem;
-					align-items: end;
+					gap: 0.5rem;
 				}
 			}
 
@@ -83,11 +82,12 @@
 				margin: 0.3rem 0;
 				border: var(--border-width) solid var(--border-color);
 				border-radius: var(--border-radius);
+				cursor: text;
 			}
 		}
 	</style>
 	<div class="regex-find">
-		<label>
+		<label class="label">
 			Find++
 			<div class="textarea" contenteditable="plaintext-only"></div>
 		</label>
@@ -101,12 +101,38 @@
 				<!-- <button data-set-index="-1">»</button> -->
 			</div>
 			<form class="flags">
-				<label for="regex-syntax"><abbr title="Enable regex syntax">/re/</abbr></label>
-				<input type="checkbox" id="regex-syntax" name="regex-syntax" checked>
-				<label for="ignore-case"><abbr title="Ignore case">i</abbr></label>
-				<input type="checkbox" id="ignore-case" name="ignore-case" checked>
-				<label for="whole-word"><abbr title="Whole word">\b</abbr></label>
-				<input type="checkbox" id="whole-word" name="whole-word">
+				<span>
+					<abbr title="Enable regex syntax">
+						<label for="regex-syntax">/re/</label><!--
+						 --><input
+							type="checkbox"
+							id="regex-syntax"
+							name="regex-syntax"
+							checked
+						>
+					</abbr>
+				</span>
+				<span>
+					<abbr title="Ignore case">
+						<label for="ignore-case">i</label><!--
+						 --><input
+							type="checkbox"
+							id="ignore-case"
+							name="ignore-case"
+							checked
+						>
+					</abbr>
+				</span>
+				<span>
+					<abbr title="Whole word">
+						<label for="whole-word">\b</label><!--
+						 --><input
+							type="checkbox"
+							id="whole-word"
+							name="whole-word"
+						>
+					</abbr>
+				</span>
 			</form>
 		</div>
 	</div>

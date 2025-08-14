@@ -1,5 +1,5 @@
 import * as CONFIG from '../src/config.ts'
-import { debounce } from '@std/async'
+import { debounce } from '@std/async/debounce'
 import { extname } from '@std/path'
 import { assert } from '@std/assert/assert'
 

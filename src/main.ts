@@ -4,6 +4,10 @@ import { modulo } from './utils.ts'
 import { assert } from '@std/assert/assert'
 import { elements } from './elements.ts'
 import { TextNodeOffsetWalker } from './textNodeOffset.ts'
+import { throttle } from '@std/async/unstable-throttle'
+
+// limit for perf reasons. limit number might need tweaking
+const MAX_MATCHES = 5000
 
 function getRanges(element: HTMLElement, regex: RegExp) {
 	const text = element.textContent ?? ''
@@ -13,6 +17,7 @@ function getRanges(element: HTMLElement, regex: RegExp) {
 	try {
 		const walker = new TextNodeOffsetWalker(element)
 
+		let i = 0
 		for (const m of text.matchAll(regex)) {
 			const start = walker.next(m.index)
 			const end = walker.next(m.index + m[0].length)
@@ -20,16 +25,23 @@ function getRanges(element: HTMLElement, regex: RegExp) {
 			const range = new Range()
 			range.setStart(...start)
 			range.setEnd(...end)
-			ranges.push(range)
+
+			if (filter(range, m[0])) {
+				ranges.push(range)
+				if (++i === MAX_MATCHES) break
+			}
 		}
 	} catch (e) {
 		console.error(e)
 	}
 
-	return ranges.filter((x) => {
-		const element = getElementAncestor(x)
-		return !element.matches('script, style') && element.checkVisibility()
-	})
+	return ranges
+}
+
+function filter(range: Range, text: string) {
+	const element = getElementAncestor(range)
+	if (!/\S/.test(text)) return false
+	return !element.matches('script, style') && element.checkVisibility()
 }
 
 function getElementAncestor(range: Range) {
@@ -111,11 +123,11 @@ function setRangeIndex(value: IndexSetter) {
 }
 
 function scrollToRange(range: Range) {
-	// make sure the element is in view (including child scroll containers)
+	// make sure the parent element is in view (including child scroll containers)
 	const element = getElementAncestor(range)
 	element.scrollIntoView({ behavior: 'instant', block: 'center', inline: 'center' })
 
-	// target the range's bounding box more acurately (not sensitive to scroll containers)
+	// target the range's bounding box more acurately (ignores child scroll containers)
 	const rect = range.getBoundingClientRect()
 
 	const totalHeight = document.documentElement.clientHeight
@@ -132,8 +144,10 @@ function scrollToRange(range: Range) {
 const REGEX_REGEX = /^\s*\/(?<source>.+)\/(?<flags>[dgimsuvy]*)\s*$/su
 const EMPTY_REGEX_SOURCE = new RegExp('').source
 
-elements.textarea.addEventListener('input', updateRegex)
-elements.flags.addEventListener('change', updateRegex)
+const updateSearch = throttle(_updateSearch, (n) => n, { ensureLast: true })
+
+elements.textarea.addEventListener('input', updateSearch)
+elements.flags.addEventListener('change', updateSearch)
 
 type Flags = ReturnType<typeof getFlags>
 
@@ -163,7 +177,7 @@ function createRegex(source: string, flagValues: Flags) {
 	return new RegExp(source, flags)
 }
 
-function updateRegex() {
+function _updateSearch() {
 	const source = elements.textarea.value
 
 	try {
