@@ -6,17 +6,19 @@ import { elements } from './elements.ts'
 import { TextNodeOffsetWalker } from './textNodeOffset.ts'
 import { throttle } from '@std/async/unstable-throttle'
 import { initEvent, readyEvent } from './events.ts'
-import { comboToPretty, eventMatchesCombo, eventToCombo } from './shortkeys.ts'
+import { eventMatchesCombo } from './shortkeys.ts'
 import type { AppOptions } from './types.ts'
+import { searchTermToRegexConfig } from './regex.ts'
 
-const optionsPromise = new Promise<AppOptions>((res) => {
-	document.addEventListener(initEvent.type, (e) => {
-		assert(initEvent.checkType(e))
-		res(e.detail.options)
-	}, { once: true })
-})
-
-document.dispatchEvent(readyEvent.create())
+const [options] = await Promise.all([
+	new Promise<AppOptions>((res) => {
+		document.addEventListener(initEvent.type, (e) => {
+			assert(initEvent.checkType(e))
+			res(e.detail.options)
+		}, { once: true })
+	}),
+	document.dispatchEvent(readyEvent.create()),
+])
 
 // limit for perf reasons. limit number might need tweaking
 const MAX_MATCHES = 5000
@@ -153,15 +155,10 @@ function scrollToRange(range: Range) {
 	document.documentElement.scrollTo(options)
 }
 
-const REGEX_REGEX = /^\s*\/(?<source>.+)\/(?<flags>[dgimsuvy]*)\s*$/su
-const EMPTY_REGEX_SOURCE = new RegExp('').source
-
 const updateSearch = throttle(_updateSearch, (n) => n, { ensureLast: true })
 
 elements.textarea.addEventListener('input', updateSearch)
 elements.flags.addEventListener('change', updateSearch)
-
-type Flags = ReturnType<typeof getFlags>
 
 function getFlags(form: HTMLFormElement) {
 	const regexSyntax = isChecked(form, 'regex-syntax')
@@ -176,46 +173,20 @@ function isChecked(form: HTMLFormElement, name: string) {
 	return el.checked
 }
 
-const wordChar = String.raw`[\p{L}\p{M}\p{N}]`
-const startOfWord = `(?:(?<!${wordChar})(?=${wordChar}))`
-const endOfWord = `(?:(?<=${wordChar})(?!${wordChar}))`
-
-function createRegex(source: string, flagValues: Flags) {
-	if (!flagValues.regexSyntax) source = RegExp.escape(source)
-	if (flagValues.wholeWord) source = `${startOfWord}${source}${endOfWord}`
-	const flags = combineFlags(flagValues.ignoreCase && 'i', 'gvm')
-
-	return new RegExp(source, flags)
-}
-
 function _updateSearch() {
 	const source = elements.textarea.value
 
 	try {
-		const m = source.match(REGEX_REGEX)
+		const { regex, kind } = searchTermToRegexConfig(source, getFlags(elements.flags))
+		elements.flags.hidden = kind === 'full'
 
-		elements.flags.hidden = Boolean(m)
-
-		/** @type {RegExp} */
-		let re: RegExp
-
-		if (m == null) {
-			re = createRegex(source, getFlags(elements.flags))
-		} else {
-			const { groups } = m
-			assert(groups != null)
-			const { source, flags } = groups
-			assert(source != null && flags != null)
-			re = new RegExp(source, combineFlags(flags, 'g'))
-		}
-
-		if (re.source === EMPTY_REGEX_SOURCE) {
+		if (regex == null) {
 			removeAllHighlights()
 			return
 		}
 
 		console.time(getRanges.name)
-		ranges = getRanges(document.body, re)
+		ranges = getRanges(document.body, regex)
 		rangeIndex = 0
 		console.timeEnd(getRanges.name)
 
@@ -231,10 +202,6 @@ function _updateSearch() {
 	}
 }
 
-function combineFlags(...flags: (string | null | false)[]) {
-	return [...new Set(flags.filter(Boolean).join(''))].sort().join('')
-}
-
 function removeAllHighlights() {
 	CSS.highlights.delete(HIGHLIGHT_ALL_ID)
 	ranges = []
@@ -242,11 +209,9 @@ function removeAllHighlights() {
 	setRangeIndex(0)
 }
 
-optionsPromise.then((options) => {
-	window.addEventListener('keydown', (e) => {
-		if (e.key === 'Escape') close()
-		if (eventMatchesCombo(e, options.shortkey)) {
-			open()
-		}
-	})
+window.addEventListener('keydown', (e) => {
+	if (e.key === 'Escape') close()
+	if (eventMatchesCombo(e, options.shortkey)) {
+		open()
+	}
 })
