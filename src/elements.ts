@@ -1,16 +1,5 @@
-import { template } from './_template.ts'
 import { CUSTOM_ELEMENT_NAME } from './config.ts'
 import { assert } from '@std/assert/assert'
-
-void (document.head ?? document.documentElement).insertAdjacentHTML(
-	'beforeend',
-	template,
-)
-
-void (document.body ?? document.documentElement).insertAdjacentHTML(
-	'beforeend',
-	`<${CUSTOM_ELEMENT_NAME} hidden></${CUSTOM_ELEMENT_NAME}>`,
-)
 
 export function getElements() {
 	const container = window.document.querySelector(CUSTOM_ELEMENT_NAME)

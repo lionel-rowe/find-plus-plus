@@ -8,7 +8,8 @@
 		"@std/assert": "jsr:@std/assert@^1.0.14",
 		"@std/async": "jsr:@std/async@^1.0.14",
 		"@std/path": "jsr:@std/path@^1.1.2",
-		"@std/async/unstable-throttle": "./src/throttle.ts"
+		"@std/async/unstable-throttle": "./src/throttle.ts",
+		"@types/chrome": "npm:@types/chrome@^0.1.4"
 	},
 	"fmt": {
 		"semiColons": false,
@@ -17,7 +18,7 @@
 		"indentWidth": 4,
 		"singleQuote": true,
 		"proseWrap": "preserve",
-		"exclude": ["**/*.css", "**/*.html"]
+		"exclude": ["**/*.css", "dist/template.html"]
 	},
 	"compilerOptions": {
 		"strict": true,

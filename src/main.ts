@@ -5,6 +5,18 @@ import { assert } from '@std/assert/assert'
 import { elements } from './elements.ts'
 import { TextNodeOffsetWalker } from './textNodeOffset.ts'
 import { throttle } from '@std/async/unstable-throttle'
+import { initEvent, readyEvent } from './events.ts'
+import { comboToPretty, eventMatchesCombo, eventToCombo } from './shortkeys.ts'
+import type { AppOptions } from './types.ts'
+
+const optionsPromise = new Promise<AppOptions>((res) => {
+	document.addEventListener(initEvent.type, (e) => {
+		assert(initEvent.checkType(e))
+		res(e.detail.options)
+	}, { once: true })
+})
+
+document.dispatchEvent(readyEvent.create())
 
 // limit for perf reasons. limit number might need tweaking
 const MAX_MATCHES = 5000
@@ -230,7 +242,11 @@ function removeAllHighlights() {
 	setRangeIndex(0)
 }
 
-window.addEventListener('keydown', (e) => {
-	if (e.key === 'Escape') close()
-	else if (e.ctrlKey && e.shiftKey && e.key === 'F') open()
+optionsPromise.then((options) => {
+	window.addEventListener('keydown', (e) => {
+		if (e.key === 'Escape') close()
+		if (eventMatchesCombo(e, options.shortkey)) {
+			open()
+		}
+	})
 })

@@ -1,0 +1,37 @@
+<!DOCTYPE html>
+<html lang="en">
+	<head>
+		<meta charset="UTF-8">
+		<title>Find++ Options</title>
+		<style>
+			:root {
+				color-scheme: dark;
+			}
+			#form {
+				& > * {
+					margin-block: 1rem;
+				}
+			}
+		</style>
+	</head>
+
+	<body>
+		<h1>Find++ Options</h1>
+
+		<form id="form">
+			<div>
+				<label for="shortkey">Shortcut Combination </label>
+				<input type="text" name="shortkey-pretty" id="shortkey-pretty">
+				<input type="hidden" name="shortkey" id="shortkey">
+			</div>
+
+			<div id="status"></div>
+
+			<div>
+				<button type="submit">Save</button>
+			</div>
+		</form>
+
+		<script src="options.js"></script>
+	</body>
+</html>
