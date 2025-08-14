@@ -4,6 +4,14 @@ import { format } from '@std/fmt/bytes'
 import { cyan, gray } from '@std/fmt/colors'
 import { concat } from '@std/bytes'
 
+const encoder = new TextEncoder()
+const decoder = new TextDecoder()
+
+function concatAsBytes(t: TemplateStringsArray, ...args: (Uint8Array | string)[]) {
+	const all = t.flatMap((str, i) => i === t.length - 1 ? str : [str, args[i]])
+	return concat(all.map((arg) => typeof arg === 'string' ? encoder.encode(arg) : arg))
+}
+
 const IN_DIR = 'src'
 const OUT_DIR = 'dist'
 
@@ -26,18 +34,18 @@ const buildJs = debounce(async () => {
 		const outPath = join(OUT_DIR, entry.replace(/\.ts$/, '.js'))
 
 		const { stdout } = await new Deno.Command(Deno.execPath(), { args, stdout: 'piped' }).spawn().output()
-		const bytes = ASYNC_IIFE_ENTRY_POINTS.includes(entry)
-			? concat([new TextEncoder().encode(`(async () => {\n`), stdout, new TextEncoder().encode('\n})()')])
-			: stdout
+		const bytes = ASYNC_IIFE_ENTRY_POINTS.includes(entry) ? concatAsBytes`(async () => {\n${stdout}\n})()` : stdout
 
-		await Deno.writeTextFile(outPath, new TextDecoder().decode(bytes))
+		await Deno.writeTextFile(outPath, decoder.decode(bytes))
 
 		infos.push({ outPath, size: bytes.length })
 	}
 	const filePathLen = Math.max(...infos.map(({ outPath }) => outPath.length))
 
 	console.info(
-		infos.map(({ outPath, size }) => `${cyan(outPath.padEnd(filePathLen))} ${gray(format(size))}`).join('\n'),
+		infos
+			.map(({ outPath, size }) => `${cyan(outPath.padEnd(filePathLen))} ${gray(format(size))}`)
+			.join('\n'),
 	)
 }, DEBOUNCE_MS)
 
