@@ -171,8 +171,7 @@ const endOfWord = `(?:(?<=${wordChar})(?!${wordChar}))`
 function createRegex(source: string, flagValues: Flags) {
 	if (!flagValues.regexSyntax) source = RegExp.escape(source)
 	if (flagValues.wholeWord) source = `${startOfWord}${source}${endOfWord}`
-	let flags = 'gv'
-	if (flagValues.ignoreCase) flags += 'i'
+	const flags = combineFlags(flagValues.ignoreCase && 'i', 'gvm')
 
 	return new RegExp(source, flags)
 }
@@ -195,7 +194,7 @@ function _updateSearch() {
 			assert(groups != null)
 			const { source, flags } = groups
 			assert(source != null && flags != null)
-			re = new RegExp(source, flags + (flags.includes('g') ? '' : 'g'))
+			re = new RegExp(source, combineFlags(flags, 'g'))
 		}
 
 		if (re.source === EMPTY_REGEX_SOURCE) {
@@ -218,6 +217,10 @@ function _updateSearch() {
 		elements.infoMessage.textContent = e.message
 		elements.info.classList.add('error')
 	}
+}
+
+function combineFlags(...flags: (string | null | false)[]) {
+	return [...new Set(flags.filter(Boolean).join(''))].sort().join('')
 }
 
 function removeAllHighlights() {
