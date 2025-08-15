@@ -23,7 +23,7 @@
 		"indentWidth": 4,
 		"singleQuote": true,
 		"proseWrap": "preserve",
-		"exclude": ["**/*.css", "dist/template.html"]
+		"exclude": []
 	},
 	"compilerOptions": {
 		"strict": true,

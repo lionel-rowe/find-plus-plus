@@ -1,14 +1,16 @@
 import { defaultOptions } from './config.ts'
-import { comboToPretty, eventToCombo } from './shortkeys.ts'
+import { comboToPrettyHtml, eventToCombo } from './shortkeys.ts'
 import { optionsStorage } from './storage.ts'
 
 const elements = {
-	shortkeyPretty: document.getElementById('shortkey-pretty') as HTMLInputElement,
+	shortkeyPretty: document.getElementById('shortkey-pretty') as HTMLElement,
 	shortkey: document.getElementById('shortkey') as HTMLInputElement,
 	status: document.getElementById('status') as HTMLElement,
 	form: document.getElementById('form') as HTMLFormElement,
 }
 
+elements.shortkeyPretty.addEventListener('paste', (e) => e.preventDefault())
+elements.shortkeyPretty.addEventListener('input', (e) => e.preventDefault())
 elements.shortkeyPretty.addEventListener('keydown', function (e) {
 	const combo = eventToCombo(e)
 	if (combo == null) return
@@ -16,9 +18,8 @@ elements.shortkeyPretty.addEventListener('keydown', function (e) {
 
 	e.preventDefault()
 
-	const pretty = comboToPretty(combo)
-	this.value = pretty
 	elements.shortkey.value = combo
+	this.innerHTML = comboToPrettyHtml(combo)
 })
 
 async function saveOptions() {
@@ -36,7 +37,7 @@ async function restoreOptions() {
 	const items = await optionsStorage.get(defaultOptions)
 
 	elements.shortkey.value = items.shortkey
-	elements.shortkeyPretty.value = comboToPretty(items.shortkey)
+	elements.shortkeyPretty.innerHTML = comboToPrettyHtml(items.shortkey)
 }
 
 restoreOptions()

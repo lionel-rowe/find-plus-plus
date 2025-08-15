@@ -13,7 +13,7 @@
 	],
 	"web_accessible_resources": [
 		{
-			"resources": ["/main.js", "/template.html"],
+			"resources": ["/main.js", "/template.html", "/styles.css"],
 			"matches": ["<all_urls>"]
 		}
 	],

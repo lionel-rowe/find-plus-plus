@@ -8,8 +8,12 @@ const { defaultOptions, CUSTOM_ELEMENT_NAME } = CONFIG
 void (async () => {
 	const res = await fetch(chrome.runtime.getURL('/template.html'))
 	const template = await res.text()
+	const config = {
+		...CONFIG,
+		STYLES_URL: chrome.runtime.getURL('/styles.css'),
+	}
 	const html = template.replaceAll(/__(\w+)__/g, (_, key) => {
-		const val = CONFIG[key as keyof typeof CONFIG]
+		const val = config[key as keyof typeof config]
 		assert(typeof val === 'string', `${key} not found in CONFIG`)
 		return val
 	})

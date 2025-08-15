@@ -4,15 +4,13 @@
 		<meta charset="UTF-8">
 		<title>Find++ Options</title>
 		<style>
-			:root {
-				color-scheme: dark;
-			}
 			#form {
 				& > * {
 					margin-block: 1rem;
 				}
 			}
 		</style>
+		<link rel="stylesheet" href="styles.css">
 	</head>
 
 	<body>
@@ -21,7 +19,7 @@
 		<form id="form">
 			<div>
 				<label for="shortkey">Shortcut Combination </label>
-				<input type="text" name="shortkey-pretty" id="shortkey-pretty">
+				<div contenteditable="true" id="shortkey-pretty" class="textarea"></div>
 				<input type="hidden" name="shortkey" id="shortkey">
 			</div>
 

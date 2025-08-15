@@ -7,89 +7,10 @@
 		color: black;
 		background: darkorange;
 	}
-	__CUSTOM_ELEMENT_NAME__[hidden] {
-		/* in case of interference from badly behaved page styles (looking at you us04web.zoom.us) */
-		display: none !important;
-	}
 </style>
 
 <template id="__TEMPLATE_ID__">
-	<style>
-		.regex-find {
-			/* == Number.MAX_SAFE_INTEGER == 0x1fffffffffffff */
-			z-index: 9007199254740991;
-
-			--border-color: #bbb;
-			--border-width: 1px;
-			--border-radius: 0.2rem;
-
-			position: fixed;
-			top: 0;
-			right: 0;
-			width: 20rem;
-
-			color-scheme: dark;
-			color: white;
-			background: #222;
-			padding: 0.8rem;
-			border-width: var(--border-width);
-			border-color: var(--border-color);
-			border-style: none none solid solid;
-			border-radius: 0 0 0 var(--border-radius);
-
-			.label {
-				display: flex;
-				flex-direction: column;
-			}
-
-			.info {
-				min-height: 1.3rem;
-				display: flex;
-				justify-content: space-between;
-				gap: 1rem;
-
-				button {
-					background: unset;
-					border: unset;
-					font-size: unset;
-					padding: unset;
-					cursor: pointer;
-					padding: 0 0.3rem;
-					opacity: 0.6;
-
-					&:hover {
-						opacity: 8;
-					}
-				}
-
-				&.error {
-					.info-message {
-						color: #f88;
-					}
-				}
-
-				&:is(.empty, .error) {
-					button {
-						display: none;
-					}
-				}
-
-				.flags:not([hidden]) {
-					display: flex;
-					gap: 0.5rem;
-					flex: 0 0 auto;
-				}
-			}
-
-			.textarea {
-				padding: 0.3rem;
-				margin: 0.3rem 0;
-				border: var(--border-width) solid var(--border-color);
-				border-radius: var(--border-radius);
-				cursor: text;
-			}
-		}
-	</style>
+	<link rel="stylesheet" href="__STYLES_URL__">
 	<div class="regex-find">
 		<label class="label">
 			Find++
