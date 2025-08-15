@@ -8,50 +8,57 @@ declare global {
 	}
 }
 
-const isMac = /^Mac/i.test(navigator.userAgentData?.platform ?? navigator.platform)
+export const platform = {
+	isApple: /\b[Mm]ac|\biP/.test(navigator.userAgentData?.platform ?? navigator.platform),
+}
 
-export const defaultComboModifier = isMac ? 'Meta' : 'Control'
+export const defaultComboModifier = () => platform.isApple ? 'Meta' : 'Control'
 
-const prettyFmtMap = new Map([
-	['ArrowRight', '→'],
-	['ArrowLeft', '←'],
-	['ArrowUp', '↑'],
-	['ArrowDown', '↓'],
-	['Plus', '+'],
-	['Control', isMac ? 'Control' : 'Ctrl'],
-	['Alt', isMac ? '⌥' : 'Alt'], // mac = "option" key
-	['Meta', isMac ? '⌘' : 'Meta'], // mac = "command" key
-])
 const normalized = new Map([
 	[' ', 'Space'],
 	['+', 'Plus'],
 	['Ctrl', 'Control'],
 ])
 
-export function eventMatchesCombo(e: KeyboardEvent, combo: string) {
+export type KbdEvent = {
+	key: string
+} & Partial<Record<typeof eventModifiers[keyof typeof eventModifiers], boolean>>
+
+export function eventMatchesCombo(e: KbdEvent, combo: string) {
 	const eventCombo = eventToCombo(e)
 	return eventCombo && (eventCombo === combo)
 }
 
+// https://superuser.com/questions/1238062/key-combination-order
 const eventModifiers = Object.fromEntries((['ctrl', 'alt', 'shift', 'meta'] as const)
 	.map((k) => [k, `${k}Key` as const]))
 
-export function comboToAriaKeyShortcut(combo: string) {
-	return combo.replace('Ctrl', 'Control')
-}
-
 function keyToPretty(key: string) {
+	const prettyFmtMap = new Map([
+		['ArrowRight', '→'],
+		['ArrowLeft', '←'],
+		['ArrowUp', '↑'],
+		['ArrowDown', '↓'],
+		['Plus', '+'],
+		['Control', platform.isApple ? 'Control' : 'Ctrl'],
+		['Alt', platform.isApple ? '⌥' : 'Alt'], // mac = "option" key
+		['Meta', platform.isApple ? '⌘' : '⊞'], // mac = "command" key; windows = "windows" key
+	])
+
 	return prettyFmtMap.get(key) ?? (key.length === 1 ? key.toUpperCase() : key)
 }
 export function comboToPretty(combo: string) {
-	return combo.split('+').map(keyToPretty).join('+')
+	return combo.split('+').map((x) => {
+		const pretty = keyToPretty(x)
+		return /[+-]/.test(pretty) ? `"${pretty}"` : pretty
+	}).join('+')
 }
 
 export function comboToPrettyHtml(combo: string) {
 	return combo.split('+').map((x) => `<kbd>${escapeHtml(keyToPretty(x))}</kbd>`).join('<span>+</span>')
 }
 
-export function eventToCombo(e: Pick<KeyboardEvent, 'key' | typeof eventModifiers[keyof typeof eventModifiers]>) {
+export function eventToCombo(e: KbdEvent) {
 	const modifierKeys = Object.keys(eventModifiers)
 		.filter((k) => e[eventModifiers[k]])
 		.map((x) => x.charAt(0).toUpperCase() + x.slice(1))
