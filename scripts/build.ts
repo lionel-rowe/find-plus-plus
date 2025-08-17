@@ -27,19 +27,23 @@ const IS_PROD = Boolean(Deno.env.get('PROD'))
 const buildJs = debounce(async () => {
 	const infos: { outPath: string; size: number }[] = []
 	for (const entry of ENTRY_POINTS) {
+		const isEsm = MAIN_WORLD_ENTRY_POINTS.includes(entry)
 		const path = join(IN_DIR, entry)
-		// ensure exists
+		// assert exists
 		await Deno.stat(path)
 
 		const args = ['bundle']
 		if (IS_PROD) args.push('--minify')
 		args.push('--platform', 'browser')
+
+		// not currently usable due to 'Top-level await is currently not supported with the "iife" output format'
+		// if (!isEsm) args.push('--format', 'iife')
+
 		args.push(path)
 
 		const outPath = join(OUT_DIR, entry.replace(/\.ts$/, '.js'))
 
 		const { stdout } = await new Deno.Command(Deno.execPath(), { args, stdout: 'piped' }).spawn().output()
-		const isEsm = MAIN_WORLD_ENTRY_POINTS.includes(entry)
 
 		const wrap: [string, string] = isEsm ? ['', ''] : ['void (async () => {\n', '})()\n']
 

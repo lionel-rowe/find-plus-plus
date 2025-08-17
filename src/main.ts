@@ -8,6 +8,7 @@ import { throttle } from '@std/async/unstable-throttle'
 import { CommandEvent, InitEvent, ReadyEvent } from './events.ts'
 import { searchTermToRegexConfig } from './regex.ts'
 import type { Command } from './types.ts'
+import { type FlagName, getFlags, setFlagDefaults } from './flagForm.ts'
 
 const [{ options }] = await Promise.all([
 	new Promise<InitEvent['detail']>((res) => {
@@ -163,28 +164,10 @@ const updateSearch = throttle(_updateSearch, (n) => n, { ensureLast: true })
 elements.textarea.addEventListener('input', updateSearch)
 elements.flags.addEventListener('change', updateSearch)
 
-type FlagName = 'use-regex' | 'match-case' | 'whole-word'
+setFlagDefaults(elements.flags, options)
 
-function setFlagDefaults() {
-	const form = elements.flags
-	const defaults: Record<FlagName, boolean> = {
-		'use-regex': options['defaults.useRegex'],
-		'match-case': options['defaults.matchCase'],
-		'whole-word': options['defaults.wholeWord'],
-	}
-
-	for (const [k, v] of Object.entries(defaults)) {
-		const el = form.querySelector(`[name="${k}"]`)
-		assert(el instanceof HTMLInputElement && el.type === 'checkbox')
-		el.checked = v
-	}
-}
-
-setFlagDefaults()
-
-function toggleFlag(name: FlagName) {
-	const form = elements.flags
-	const el = form.querySelector(`[name="${name}"]`)
+export function toggleFlag(name: FlagName) {
+	const el = elements.flags.querySelector(`[name="${name}"]`)
 	assert(el instanceof HTMLInputElement && el.type === 'checkbox')
 
 	return () => {
@@ -194,25 +177,11 @@ function toggleFlag(name: FlagName) {
 	}
 }
 
-function getFlags() {
-	const form = elements.flags
-	const regexSyntax = isChecked(form, 'use-regex')
-	const matchCase = isChecked(form, 'match-case')
-	const wholeWord = isChecked(form, 'whole-word')
-	return { regexSyntax, matchCase, wholeWord }
-}
-
-function isChecked(form: HTMLFormElement, name: FlagName) {
-	const el = form.querySelector(`[name="${name}"]`)
-	assert(el instanceof HTMLInputElement && el.type === 'checkbox')
-	return el.checked
-}
-
 function _updateSearch() {
 	const source = elements.textarea.value
 
 	try {
-		const { regex, kind } = searchTermToRegexConfig(source, getFlags())
+		const { regex, kind } = searchTermToRegexConfig(source, getFlags(elements.flags))
 		elements.flags.hidden = kind === 'full'
 
 		if (regex == null) {

@@ -63,12 +63,6 @@
 				display: none;
 			}
 		}
-
-		.flags:not([hidden]) {
-			display: flex;
-			gap: 0.5rem;
-			flex: 0 0 auto;
-		}
 	}
 }
 
@@ -78,4 +72,37 @@
 	border: var(--border-width) solid var(--border-color);
 	border-radius: var(--border-radius);
 	cursor: text;
+}
+
+.flags:not([hidden]) {
+	display: flex;
+	gap: 0.5rem;
+	flex: 0 0 auto;
+}
+
+.flags :is(abbr, abbr label) {
+	text-decoration: none;
+	cursor: help;
+}
+
+.underline-square-outer {
+	position: relative;
+	display: inline-flex;
+	justify-content: center;
+}
+
+.underline-square {
+	position: absolute;
+	display: inline-flex;
+	width: 1.3em;
+	justify-content: center;
+	bottom: 0;
+	height: 0.2em;
+	border-color: white;
+	border-style: solid;
+	border-width: 0 1px 1px 1px;
+}
+
+.underline-square-text {
+	line-height: 1.3;
 }

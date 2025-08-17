@@ -44,7 +44,12 @@ export function searchTermToRegexConfig(searchTerm: string, flagValues: Flags): 
 }
 
 function createRegex(source: string, flagValues: Flags) {
-	if (!flagValues.regexSyntax) source = RegExp.escape(source)
+	if (!flagValues.regexSyntax) {
+		source = RegExp.escape(source)
+	} else {
+		// gives a more concise error message in case of regex syntax error
+		new RegExp(source, 'v')
+	}
 	if (flagValues.wholeWord) source = `${startOfWord}${source}${endOfWord}`
 	const flags = combineFlags(flagValues.matchCase ? '' : 'i', 'gvm')
 

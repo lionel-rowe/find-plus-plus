@@ -1,43 +1,39 @@
-import { defaultOptions } from './config.ts'
-import { comboToPrettyHtml, eventToCombo } from './shortkeys.ts'
+import { defaultOptions, TEMPLATE_ID } from './config.ts'
+import { getFlags, setFlagDefaults } from './flagForm.ts'
+import { html } from './populateTemplate.ts'
 import { optionsStorage } from './storage.ts'
 
 const elements = {
-	shortkeyPretty: document.getElementById('shortkey-pretty') as HTMLElement,
 	shortkey: document.getElementById('shortkey') as HTMLInputElement,
 	status: document.getElementById('status') as HTMLElement,
 	form: document.getElementById('form') as HTMLFormElement,
 }
 
-elements.shortkeyPretty.addEventListener('paste', (e) => e.preventDefault())
-elements.shortkeyPretty.addEventListener('input', (e) => e.preventDefault())
-elements.shortkeyPretty.addEventListener('keydown', function (e) {
-	const combo = eventToCombo(e)
-	if (combo == null) return
-	if (['Tab', 'Shift+Tab'].includes(combo)) return
+const template = new DOMParser().parseFromString(html, 'text/html').getElementById(TEMPLATE_ID) as HTMLTemplateElement
 
-	e.preventDefault()
-
-	elements.shortkey.value = combo
-	this.innerHTML = comboToPrettyHtml(combo)
-})
+const flagsSource = template.content.querySelector('form.flags')!
+const flagsTarget = document.getElementById('default-flags-container')!
+for (const className of flagsSource.classList) flagsTarget.classList.add(className)
+flagsTarget.append(...flagsSource.children)
 
 async function saveOptions() {
-	// const shortkey = elements.shortkey.value
+	const flags = getFlags(elements.form)
 
-	// await optionsStorage.set({ 'shortkeys.open': shortkey })
+	await optionsStorage.set({
+		'defaults.useRegex': flags.regexSyntax,
+		'defaults.matchCase': flags.matchCase,
+		'defaults.wholeWord': flags.wholeWord,
+	})
 
-	// elements.status.textContent = 'Options saved!'
-	// setTimeout(() => {
-	// 	elements.status.textContent = ''
-	// }, 2000)
+	elements.status.textContent = 'Options saved!'
+	setTimeout(() => {
+		elements.status.textContent = ''
+	}, 2000)
 }
 
 async function restoreOptions() {
-	// const items = await optionsStorage.get(defaultOptions)
-
-	// elements.shortkey.value = items['shortkeys.open']
-	// elements.shortkeyPretty.innerHTML = comboToPrettyHtml(items['shortkeys.open'])
+	const options = await optionsStorage.get(defaultOptions)
+	setFlagDefaults(elements.form, options)
 }
 
 restoreOptions()
