@@ -5,18 +5,18 @@ import { assert } from '@std/assert/assert'
 import { elements } from './elements.ts'
 import { TextNodeOffsetWalker } from './textNodeOffset.ts'
 import { throttle } from '@std/async/unstable-throttle'
-import { type EventDetail, initEvent, readyEvent } from './events.ts'
-import { eventMatchesCombo } from './shortkeys.ts'
+import { InitEvent, ReadyEvent } from './events.ts'
+import { eventToCombo } from './shortkeys.ts'
 import { searchTermToRegexConfig } from './regex.ts'
 
 const [{ options }] = await Promise.all([
-	new Promise<EventDetail<typeof initEvent>>((res) => {
-		document.addEventListener(initEvent.type, (e) => {
-			assert(initEvent.checkType(e))
+	new Promise<InitEvent['detail']>((res) => {
+		document.addEventListener(InitEvent.TYPE, (e) => {
+			assert(e instanceof InitEvent)
 			res(e.detail)
 		}, { once: true })
 	}),
-	document.dispatchEvent(readyEvent.create()),
+	document.dispatchEvent(new ReadyEvent()),
 ])
 
 // limit for perf reasons. limit number might need tweaking
@@ -210,7 +210,12 @@ function removeAllHighlights() {
 
 window.addEventListener('keydown', (e) => {
 	if (e.key === 'Escape') close()
-	if (eventMatchesCombo(e, options.shortkey)) {
-		open()
+	switch (eventToCombo(e)) {
+		case options.shortkey: {
+			open()
+			break
+		}
+		default:
+			break
 	}
 })

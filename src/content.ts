@@ -1,6 +1,6 @@
 import { assert } from '@std/assert/assert'
 import * as CONFIG from './config.ts'
-import { initEvent, readyEvent } from './events.ts'
+import { InitEvent, ReadyEvent } from './events.ts'
 import { optionsStorage } from './storage.ts'
 
 const { defaultOptions, ...ids } = CONFIG
@@ -31,8 +31,8 @@ void (async () => {
 
 	const options = await optionsStorage.get(defaultOptions)
 
-	document.addEventListener(readyEvent.type, (e) => {
-		assert(readyEvent.checkType(e))
-		document.dispatchEvent(initEvent.create({ options }))
+	document.addEventListener(ReadyEvent.TYPE, (e) => {
+		assert(e instanceof ReadyEvent)
+		document.dispatchEvent(new InitEvent({ options }))
 	}, { once: true })
 })()

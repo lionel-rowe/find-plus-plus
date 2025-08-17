@@ -1,18 +1,31 @@
+import { assert } from '@std/assert/assert'
 import type { AppOptions } from './types.ts'
 
-export const readyEvent = createCustomEventType(`${APP_ID}-ready`)
-export const initEvent = createCustomEventType<{ options: AppOptions }>(`${APP_ID}-init`)
+type AppEventType = `${typeof APP_ID}-${string}`
+const registeredTypes = new Set<string>()
+function makeAppEventType<T extends string>(t: T) {
+	assert(!registeredTypes.has(t))
+	registeredTypes.add(t)
 
-export type EventDetail<T extends ReturnType<typeof createCustomEventType>> = Parameters<T['create']>[0]
+	return `${APP_ID}-${t}` as const
+}
 
-function createCustomEventType<T = undefined>(type: string) {
-	return {
-		type,
-		create(...[detail]: T extends undefined ? [] : [T]) {
-			return new CustomEvent(type, { detail })
-		},
-		checkType(x: Event): x is CustomEvent<T> {
-			return x instanceof CustomEvent && x.type === type
-		},
+abstract class AppEvent<D> extends CustomEvent<D> {
+	constructor(...[detail]: D extends undefined ? [] : [D]) {
+		super(new.target.TYPE, { detail })
 	}
+
+	static override [Symbol.hasInstance](x: unknown) {
+		return x instanceof CustomEvent && x.type === this.TYPE
+	}
+
+	static readonly TYPE: AppEventType
+}
+
+export class ReadyEvent extends AppEvent<undefined> {
+	static override readonly TYPE = makeAppEventType('ready')
+}
+
+export class InitEvent extends AppEvent<{ options: AppOptions }> {
+	static override readonly TYPE = makeAppEventType('init')
 }
