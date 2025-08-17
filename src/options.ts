@@ -23,21 +23,21 @@ elements.shortkeyPretty.addEventListener('keydown', function (e) {
 })
 
 async function saveOptions() {
-	const shortkey = elements.shortkey.value
+	// const shortkey = elements.shortkey.value
 
-	await optionsStorage.set({ shortkey })
+	// await optionsStorage.set({ 'shortkeys.open': shortkey })
 
-	elements.status.textContent = 'Options saved!'
-	setTimeout(() => {
-		elements.status.textContent = ''
-	}, 2000)
+	// elements.status.textContent = 'Options saved!'
+	// setTimeout(() => {
+	// 	elements.status.textContent = ''
+	// }, 2000)
 }
 
 async function restoreOptions() {
-	const items = await optionsStorage.get(defaultOptions)
+	// const items = await optionsStorage.get(defaultOptions)
 
-	elements.shortkey.value = items.shortkey
-	elements.shortkeyPretty.innerHTML = comboToPrettyHtml(items.shortkey)
+	// elements.shortkey.value = items['shortkeys.open']
+	// elements.shortkeyPretty.innerHTML = comboToPrettyHtml(items['shortkeys.open'])
 }
 
 restoreOptions()

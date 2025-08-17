@@ -5,9 +5,9 @@ import { assert } from '@std/assert/assert'
 import { elements } from './elements.ts'
 import { TextNodeOffsetWalker } from './textNodeOffset.ts'
 import { throttle } from '@std/async/unstable-throttle'
-import { InitEvent, ReadyEvent } from './events.ts'
-import { eventToCombo } from './shortkeys.ts'
+import { CommandEvent, InitEvent, ReadyEvent } from './events.ts'
 import { searchTermToRegexConfig } from './regex.ts'
+import type { Command } from './types.ts'
 
 const [{ options }] = await Promise.all([
 	new Promise<InitEvent['detail']>((res) => {
@@ -18,6 +18,8 @@ const [{ options }] = await Promise.all([
 	}),
 	document.dispatchEvent(new ReadyEvent()),
 ])
+
+let isOpen = false
 
 // limit for perf reasons. limit number might need tweaking
 const MAX_MATCHES = 5000
@@ -69,12 +71,14 @@ function open() {
 	elements.container.hidden = false
 	elements.textarea.focus()
 	elements.textarea.dispatchEvent(new Event('input'))
+	isOpen = true
 }
 
 function close() {
 	elements.container.hidden = true
 	CSS.highlights.delete(HIGHLIGHT_ALL_ID)
 	CSS.highlights.delete(HIGHLIGHT_ONE_ID)
+	isOpen = false
 }
 
 elements.textarea.addEventListener('keydown', (e) => {
@@ -159,14 +163,46 @@ const updateSearch = throttle(_updateSearch, (n) => n, { ensureLast: true })
 elements.textarea.addEventListener('input', updateSearch)
 elements.flags.addEventListener('change', updateSearch)
 
-function getFlags(form: HTMLFormElement) {
-	const regexSyntax = isChecked(form, 'regex-syntax')
-	const ignoreCase = isChecked(form, 'ignore-case')
-	const wholeWord = isChecked(form, 'whole-word')
-	return { regexSyntax, ignoreCase, wholeWord }
+type FlagName = 'use-regex' | 'match-case' | 'whole-word'
+
+function setFlagDefaults() {
+	const form = elements.flags
+	const defaults: Record<FlagName, boolean> = {
+		'use-regex': options['defaults.useRegex'],
+		'match-case': options['defaults.matchCase'],
+		'whole-word': options['defaults.wholeWord'],
+	}
+
+	for (const [k, v] of Object.entries(defaults)) {
+		const el = form.querySelector(`[name="${k}"]`)
+		assert(el instanceof HTMLInputElement && el.type === 'checkbox')
+		el.checked = v
+	}
 }
 
-function isChecked(form: HTMLFormElement, name: string) {
+setFlagDefaults()
+
+function toggleFlag(name: FlagName) {
+	const form = elements.flags
+	const el = form.querySelector(`[name="${name}"]`)
+	assert(el instanceof HTMLInputElement && el.type === 'checkbox')
+
+	return () => {
+		if (!isOpen) return
+		el.checked = !el.checked
+		elements.textarea.dispatchEvent(new Event('input'))
+	}
+}
+
+function getFlags() {
+	const form = elements.flags
+	const regexSyntax = isChecked(form, 'use-regex')
+	const matchCase = isChecked(form, 'match-case')
+	const wholeWord = isChecked(form, 'whole-word')
+	return { regexSyntax, matchCase, wholeWord }
+}
+
+function isChecked(form: HTMLFormElement, name: FlagName) {
 	const el = form.querySelector(`[name="${name}"]`)
 	assert(el instanceof HTMLInputElement && el.type === 'checkbox')
 	return el.checked
@@ -176,7 +212,7 @@ function _updateSearch() {
 	const source = elements.textarea.value
 
 	try {
-		const { regex, kind } = searchTermToRegexConfig(source, getFlags(elements.flags))
+		const { regex, kind } = searchTermToRegexConfig(source, getFlags())
 		elements.flags.hidden = kind === 'full'
 
 		if (regex == null) {
@@ -208,14 +244,15 @@ function removeAllHighlights() {
 	setRangeIndex(0)
 }
 
-window.addEventListener('keydown', (e) => {
-	if (e.key === 'Escape') close()
-	switch (eventToCombo(e)) {
-		case options.shortkey: {
-			open()
-			break
-		}
-		default:
-			break
-	}
+const commandMap: Record<Command, () => void> = {
+	open,
+	close,
+	matchCase: toggleFlag('match-case'),
+	wholeWord: toggleFlag('whole-word'),
+	useRegex: toggleFlag('use-regex'),
+}
+
+document.addEventListener(CommandEvent.TYPE, (e) => {
+	assert(e instanceof CommandEvent)
+	commandMap[e.detail.command]()
 })

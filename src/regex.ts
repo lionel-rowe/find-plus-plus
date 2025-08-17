@@ -2,7 +2,7 @@ import { assert } from '@std/assert/assert'
 
 export type Flags = {
 	regexSyntax: boolean
-	ignoreCase: boolean
+	matchCase: boolean
 	wholeWord: boolean
 }
 
@@ -10,6 +10,7 @@ const REGEX_REGEX = /^\s*\/(?<source>.+)\/(?<flags>[dgimsuvy]*)\s*$/su
 const EMPTY_REGEX_SOURCE = new RegExp('').source
 
 const wordChar = String.raw`[\p{L}\p{M}\p{N}]`
+// TODO: better regex for these? e.g. should "{" surrounded by space be counted as a word?
 const startOfWord = `(?:(?<!${wordChar})(?=${wordChar}))`
 const endOfWord = `(?:(?<=${wordChar})(?!${wordChar}))`
 
@@ -45,7 +46,7 @@ export function searchTermToRegexConfig(searchTerm: string, flagValues: Flags): 
 function createRegex(source: string, flagValues: Flags) {
 	if (!flagValues.regexSyntax) source = RegExp.escape(source)
 	if (flagValues.wholeWord) source = `${startOfWord}${source}${endOfWord}`
-	const flags = combineFlags(flagValues.ignoreCase && 'i', 'gvm')
+	const flags = combineFlags(flagValues.matchCase ? '' : 'i', 'gvm')
 
 	return new RegExp(source, flags)
 }

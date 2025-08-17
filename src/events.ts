@@ -1,5 +1,5 @@
 import { assert } from '@std/assert/assert'
-import type { AppOptions } from './types.ts'
+import type { AppOptions, Command } from './types.ts'
 
 type AppEventType = `${typeof APP_ID}-${string}`
 const registeredTypes = new Set<string>()
@@ -10,7 +10,7 @@ function makeAppEventType<T extends string>(t: T) {
 	return `${APP_ID}-${t}` as const
 }
 
-abstract class AppEvent<D> extends CustomEvent<D> {
+abstract class AppEvent<D = undefined> extends CustomEvent<D> {
 	constructor(...[detail]: D extends undefined ? [] : [D]) {
 		super(new.target.TYPE, { detail })
 	}
@@ -22,10 +22,14 @@ abstract class AppEvent<D> extends CustomEvent<D> {
 	static readonly TYPE: AppEventType
 }
 
-export class ReadyEvent extends AppEvent<undefined> {
+export class ReadyEvent extends AppEvent {
 	static override readonly TYPE = makeAppEventType('ready')
 }
 
 export class InitEvent extends AppEvent<{ options: AppOptions }> {
 	static override readonly TYPE = makeAppEventType('init')
+}
+
+export class CommandEvent extends AppEvent<{ command: Command }> {
+	static override readonly TYPE = makeAppEventType('open')
 }

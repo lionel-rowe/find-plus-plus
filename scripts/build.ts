@@ -40,9 +40,12 @@ const buildJs = debounce(async () => {
 
 		const { stdout } = await new Deno.Command(Deno.execPath(), { args, stdout: 'piped' }).spawn().output()
 		const isEsm = MAIN_WORLD_ENTRY_POINTS.includes(entry)
+
+		const wrap: [string, string] = isEsm ? ['', ''] : ['void (async () => {\n', '})()\n']
+
 		const id = isEsm ? 'new URL(import.meta.url).hostname' : 'chrome.runtime.id'
 		const bytes = stdout.length
-			? concatAsBytes`const APP_ID = ${JSON.stringify(_prefix)} + ${id};\n${stdout}`
+			? concatAsBytes`${wrap[0]}const APP_ID = ${JSON.stringify(_prefix)} + ${id};\n${stdout}${wrap[1]}`
 			: stdout
 
 		await Deno.writeTextFile(outPath, decoder.decode(bytes))

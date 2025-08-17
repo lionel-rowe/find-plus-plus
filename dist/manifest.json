@@ -5,6 +5,27 @@
 	"version": "0.0.0",
 	"icons": {
 	},
+	"commands": {
+		"open": {
+			"suggested_key": {
+				"default": "Ctrl+Shift+F",
+				"mac": "Command+Shift+Y"
+			},
+			"description": "Open the Find++ search box"
+		},
+		"matchCase": {
+			"suggested_key": "Alt+C",
+			"description": "Toggle case-sensitive matching"
+		},
+		"wholeWord": {
+			"suggested_key": "Alt+W",
+			"description": "Toggle whole-word matching"
+		},
+		"useRegex": {
+			"suggested_key": "Alt+R",
+			"description": "Toggle regular expression syntax"
+		}
+	},
 	"content_scripts": [
 		{
 			"js": ["/content.js"],
