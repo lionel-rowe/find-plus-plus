@@ -19,7 +19,11 @@ abstract class AppEvent<D = undefined> extends CustomEvent<D> {
 		return x instanceof CustomEvent && x.type === this.TYPE
 	}
 
-	static readonly TYPE: AppEventType
+	static get TYPE(): AppEventType {
+		// runtime workaround for lack of `static abstract` properties
+		// https://github.com/microsoft/TypeScript/issues/34516
+		throw new Error('abstract `TYPE` must be overridden in subclass')
+	}
 }
 
 export class ReadyEvent extends AppEvent {
