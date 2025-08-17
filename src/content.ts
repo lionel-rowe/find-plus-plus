@@ -1,15 +1,16 @@
 import { assert } from '@std/assert/assert'
-import * as CONFIG from '../src/config.ts'
+import * as CONFIG from './config.ts'
 import { initEvent, readyEvent } from './events.ts'
 import { optionsStorage } from './storage.ts'
 
-const { defaultOptions, CUSTOM_ELEMENT_NAME } = CONFIG
+const { defaultOptions, ...ids } = CONFIG
+const { CUSTOM_ELEMENT_NAME } = ids
 
 void (async () => {
 	const res = await fetch(chrome.runtime.getURL('/template.html'))
 	const template = await res.text()
 	const config = {
-		...CONFIG,
+		...ids,
 		STYLES_URL: chrome.runtime.getURL('/styles.css'),
 	}
 	const html = template.replaceAll(/__(\w+)__/g, (_, key) => {
@@ -23,7 +24,10 @@ void (async () => {
 	el.hidden = true
 	document.body.append(el)
 
-	chrome.runtime.sendMessage({ action: 'INIT' })
+	const script = document.createElement('script')
+	script.type = 'module'
+	script.src = chrome.runtime.getURL('/main.js')
+	document.body.append(script)
 
 	const options = await optionsStorage.get(defaultOptions)
 

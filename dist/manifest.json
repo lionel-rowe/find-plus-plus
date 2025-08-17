@@ -7,7 +7,7 @@
 	},
 	"content_scripts": [
 		{
-			"js": ["/init.js"],
+			"js": ["/content.js"],
 			"matches": ["<all_urls>"]
 		}
 	],

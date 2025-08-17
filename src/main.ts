@@ -5,16 +5,15 @@ import { assert } from '@std/assert/assert'
 import { elements } from './elements.ts'
 import { TextNodeOffsetWalker } from './textNodeOffset.ts'
 import { throttle } from '@std/async/unstable-throttle'
-import { initEvent, readyEvent } from './events.ts'
+import { type EventDetail, initEvent, readyEvent } from './events.ts'
 import { eventMatchesCombo } from './shortkeys.ts'
-import type { AppOptions } from './types.ts'
 import { searchTermToRegexConfig } from './regex.ts'
 
-const [options] = await Promise.all([
-	new Promise<AppOptions>((res) => {
+const [{ options }] = await Promise.all([
+	new Promise<EventDetail<typeof initEvent>>((res) => {
 		document.addEventListener(initEvent.type, (e) => {
 			assert(initEvent.checkType(e))
-			res(e.detail.options)
+			res(e.detail)
 		}, { once: true })
 	}),
 	document.dispatchEvent(readyEvent.create()),
@@ -127,7 +126,7 @@ function setRangeIndex(value: IndexSetter) {
 	elements.info.classList.remove('empty')
 
 	rangeIndex = modulo(typeof value === 'function' ? value(rangeIndex) : value, ranges.length)
-	const range = ranges[rangeIndex]
+	const range = ranges[rangeIndex]!
 
 	CSS.highlights.set(HIGHLIGHT_ONE_ID, new Highlight(range))
 
