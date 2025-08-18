@@ -230,7 +230,6 @@ function _updateSearch() {
 	}
 
 	const highlighter = new RegexSyntaxHighlighter(elements.textarea, regex, result.kind === 'full')
-	console.log(highlighter.debug())
 
 	for (const [name, highlight] of Object.entries(highlighter.highlights)) {
 		CSS.highlights.set(name, highlight)

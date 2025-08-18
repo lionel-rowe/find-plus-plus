@@ -23,18 +23,18 @@ export const regexSyntaxHighlightTypes = [
 	'CapturingGroup',
 	'Backreference',
 
-	'ClassStringDisjunction',
-	'StringAlternative',
-
 	'ExpressionCharacterClass',
 
 	'ClassIntersection',
 	'ClassSubtraction',
 
 	'CharacterClass',
+	'CharacterClassRange',
+
+	'ClassStringDisjunction',
+	'StringAlternative',
 
 	'Assertion',
-	'CharacterClassRange',
 	'CharacterSet',
 	'EscapedCharacter',
 	'Character',
