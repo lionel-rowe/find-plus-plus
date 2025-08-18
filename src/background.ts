@@ -11,7 +11,6 @@ import type { Command, Message } from './types.ts'
 // }
 
 chrome.commands.onCommand.addListener((command, tab) => {
-	console.log(command, tab)
 	if (tab?.id == null) return
 	const message: Message = { command: command as Command }
 	chrome.tabs.sendMessage(tab.id, message)

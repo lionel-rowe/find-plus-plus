@@ -5,20 +5,31 @@ import { assert } from '@std/assert/assert'
 import { elements } from './elements.ts'
 import { TextNodeOffsetWalker } from './textNodeOffset.ts'
 import { throttle } from '@std/async/unstable-throttle'
-import { CommandEvent, InitEvent, ReadyEvent } from './events.ts'
-import { searchTermToRegexConfig } from './regex.ts'
+import { CommandEvent, NotifyReadyEvent, UpdateOptionsEvent } from './events.ts'
+import { searchTermToRegexResult } from './regex.ts'
 import type { Command } from './types.ts'
 import { type FlagName, getFlags, setFlagDefaults } from './flagForm.ts'
 
-const [{ options }] = await Promise.all([
-	new Promise<InitEvent['detail']>((res) => {
-		document.addEventListener(InitEvent.TYPE, (e) => {
-			assert(e instanceof InitEvent)
-			res(e.detail)
-		}, { once: true })
-	}),
-	document.dispatchEvent(new ReadyEvent()),
-])
+const commandMap: Record<Command, () => void> = {
+	open,
+	close,
+	matchCase: toggleFlag('match-case'),
+	wholeWord: toggleFlag('whole-word'),
+	useRegex: toggleFlag('use-regex'),
+}
+
+document.addEventListener(CommandEvent.TYPE, (e) => {
+	assert(e instanceof CommandEvent)
+	commandMap[e.detail.command]()
+})
+
+document.addEventListener(UpdateOptionsEvent.TYPE, (e) => {
+	assert(e instanceof UpdateOptionsEvent)
+	const { options } = e.detail
+	setFlagDefaults(elements.flags, options)
+})
+
+document.dispatchEvent(new NotifyReadyEvent())
 
 let isOpen = false
 
@@ -68,7 +79,15 @@ function getElementAncestor(range: Range) {
 let ranges: Range[] = []
 let rangeIndex = 0
 
-function open() {
+const cssLoaded = new Promise<void>((res) => {
+	const { style } = elements
+	if (style.sheet) return res()
+	else style.addEventListener('load', () => res(), { once: true })
+})
+
+async function open() {
+	await cssLoaded
+
 	elements.container.hidden = false
 	elements.textarea.focus()
 	elements.textarea.dispatchEvent(new Event('input'))
@@ -123,7 +142,7 @@ function setRangeIndex(value: IndexSetter) {
 
 	if (!ranges.length) {
 		elements.info.classList.add('empty')
-		elements.infoMessage.textContent = ''
+		elements.infoMessage.textContent = elements.textarea.value ? 'No results' : ''
 		CSS.highlights.delete(HIGHLIGHT_ONE_ID)
 		return
 	}
@@ -164,8 +183,6 @@ const updateSearch = throttle(_updateSearch, (n) => n, { ensureLast: true })
 elements.textarea.addEventListener('input', updateSearch)
 elements.flags.addEventListener('change', updateSearch)
 
-setFlagDefaults(elements.flags, options)
-
 export function toggleFlag(name: FlagName) {
 	const el = elements.flags.querySelector(`[name="${name}"]`)
 	assert(el instanceof HTMLInputElement && el.type === 'checkbox')
@@ -179,31 +196,34 @@ export function toggleFlag(name: FlagName) {
 
 function _updateSearch() {
 	const source = elements.textarea.value
+	const result = searchTermToRegexResult(source, getFlags(elements.flags))
 
-	try {
-		const { regex, kind } = searchTermToRegexConfig(source, getFlags(elements.flags))
-		elements.flags.hidden = kind === 'full'
+	elements.textarea.style.fontFamily = result.kind === 'full' || result.kind === 'error' || result.usesRegexSyntax
+		? 'var(--code-font)'
+		: 'var(--prose-font)'
 
-		if (regex == null) {
-			removeAllHighlights()
-			return
-		}
-
-		console.time(getRanges.name)
-		ranges = getRanges(document.body, regex)
-		rangeIndex = 0
-		console.timeEnd(getRanges.name)
-
-		CSS.highlights.set(HIGHLIGHT_ALL_ID, new Highlight(...ranges))
-
-		setRangeIndex(0)
-	} catch (e) {
-		if (!(e instanceof SyntaxError)) throw e
-
+	if (result.kind === 'error') {
 		removeAllHighlights()
-		elements.infoMessage.textContent = e.message
+		elements.infoMessage.textContent = result.error.message
 		elements.info.classList.add('error')
+		return
 	}
+
+	const { regex, kind } = result
+
+	elements.flags.hidden = kind === 'full'
+
+	if (regex == null) {
+		removeAllHighlights()
+		return
+	}
+
+	ranges = getRanges(document.body, regex)
+	rangeIndex = 0
+
+	CSS.highlights.set(HIGHLIGHT_ALL_ID, new Highlight(...ranges))
+
+	setRangeIndex(0)
 }
 
 function removeAllHighlights() {
@@ -212,16 +232,3 @@ function removeAllHighlights() {
 	rangeIndex = 0
 	setRangeIndex(0)
 }
-
-const commandMap: Record<Command, () => void> = {
-	open,
-	close,
-	matchCase: toggleFlag('match-case'),
-	wholeWord: toggleFlag('whole-word'),
-	useRegex: toggleFlag('use-regex'),
-}
-
-document.addEventListener(CommandEvent.TYPE, (e) => {
-	assert(e instanceof CommandEvent)
-	commandMap[e.detail.command]()
-})

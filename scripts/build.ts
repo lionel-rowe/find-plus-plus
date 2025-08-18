@@ -36,7 +36,10 @@ const buildJs = debounce(async () => {
 		if (IS_PROD) args.push('--minify')
 		args.push('--platform', 'browser')
 
-		// not currently usable due to 'Top-level await is currently not supported with the "iife" output format'
+		// // TODO: maybe add?
+		// args.push('--code-splitting')
+		// // not currently usable due to 'Top-level await is currently not supported with the "iife" output format'
+		// // https://github.com/denoland/deno/issues/30431
 		// if (!isEsm) args.push('--format', 'iife')
 
 		args.push(path)

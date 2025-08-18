@@ -14,32 +14,55 @@ const wordChar = String.raw`[\p{L}\p{M}\p{N}]`
 const startOfWord = `(?:(?<!${wordChar})(?=${wordChar}))`
 const endOfWord = `(?:(?<=${wordChar})(?!${wordChar}))`
 
-type RegexConfig = {
-	kind: 'full' | 'sourceOnly'
+type RegexSourceOnlyResult = {
+	kind: 'sourceOnly'
+	usesRegexSyntax: boolean
 	regex: RegExp | null
 }
 
-export function searchTermToRegexConfig(searchTerm: string, flagValues: Flags): RegexConfig {
-	const m = searchTerm.match(REGEX_REGEX)
+type RegexFullResult = {
+	kind: 'full'
+	regex: RegExp | null
+}
 
-	if (m == null) {
-		const regex = createRegex(searchTerm, flagValues)
+type RegexErrorResult = {
+	kind: 'error'
+	error: SyntaxError
+}
+
+type RegexConfig = RegexSourceOnlyResult | RegexFullResult | RegexErrorResult
+
+export function searchTermToRegexResult(searchTerm: string, flagValues: Flags): RegexConfig {
+	try {
+		const m = searchTerm.match(REGEX_REGEX)
+
+		if (m == null) {
+			const regex = createRegex(searchTerm, flagValues)
+
+			return {
+				kind: 'sourceOnly',
+				usesRegexSyntax: flagValues.regexSyntax,
+				regex: regex.source === EMPTY_REGEX_SOURCE ? null : regex,
+			}
+		}
+
+		const { groups } = m
+		assert(groups != null)
+		const { source, flags } = groups
+		assert(source != null && flags != null)
+		const regex = new RegExp(source, combineFlags(flags, 'g'))
 
 		return {
-			kind: 'sourceOnly',
+			kind: 'full',
 			regex: regex.source === EMPTY_REGEX_SOURCE ? null : regex,
 		}
-	}
+	} catch (e) {
+		if (!(e instanceof SyntaxError)) throw e
 
-	const { groups } = m
-	assert(groups != null)
-	const { source, flags } = groups
-	assert(source != null && flags != null)
-	const regex = new RegExp(source, combineFlags(flags, 'g'))
-
-	return {
-		kind: 'full',
-		regex: regex.source === EMPTY_REGEX_SOURCE ? null : regex,
+		return {
+			kind: 'error',
+			error: e,
+		}
 	}
 }
 

@@ -1,13 +1,12 @@
 import { assert } from '@std/assert/assert'
 import type { AppOptions, Command } from './types.ts'
 
-type AppEventType = `${typeof APP_ID}-${string}`
+type AppEventType = `${typeof APP_ID}_${string}`
 const registeredTypes = new Set<string>()
-function makeAppEventType<T extends string>(t: T) {
+function makeAppEventType<T extends string>(t: T): AppEventType {
 	assert(!registeredTypes.has(t))
 	registeredTypes.add(t)
-
-	return `${APP_ID}-${t}` as const
+	return `${APP_ID}_${t}`
 }
 
 abstract class AppEvent<D = undefined> extends CustomEvent<D> {
@@ -26,14 +25,14 @@ abstract class AppEvent<D = undefined> extends CustomEvent<D> {
 	}
 }
 
-export class ReadyEvent extends AppEvent {
-	static override readonly TYPE = makeAppEventType('ready')
+export class NotifyReadyEvent extends AppEvent {
+	static override readonly TYPE = makeAppEventType('notifyReady')
 }
 
-export class InitEvent extends AppEvent<{ options: AppOptions }> {
-	static override readonly TYPE = makeAppEventType('init')
+export class UpdateOptionsEvent extends AppEvent<{ options: AppOptions }> {
+	static override readonly TYPE = makeAppEventType('updateOptions')
 }
 
 export class CommandEvent extends AppEvent<{ command: Command }> {
-	static override readonly TYPE = makeAppEventType('open')
+	static override readonly TYPE = makeAppEventType('command')
 }

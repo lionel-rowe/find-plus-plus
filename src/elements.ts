@@ -26,8 +26,10 @@ export function getElements() {
 	assert(infoMessage instanceof HTMLElement)
 	const flags = document.querySelector('.flags')
 	assert(flags instanceof HTMLFormElement)
+	const style = document.querySelector('link')
+	assert(style instanceof HTMLLinkElement)
 
-	return { container, textarea, info, infoMessage, flags }
+	return { container, textarea, info, infoMessage, flags, style }
 }
 
 export const elements = getElements()

@@ -72,6 +72,11 @@
 	border: var(--border-width) solid var(--border-color);
 	border-radius: var(--border-radius);
 	cursor: text;
+	--code-font: monospace;
+	--prose-font: sans-serif;
+	font-family: var(--code-font);
+	font-size-adjust: cap-height 0.6;
+	line-height: 1rem;
 }
 
 .flags:not([hidden]) {
