@@ -9,6 +9,7 @@ import { CloseEvent, CommandEvent, NotifyReadyEvent, UpdateOptionsEvent } from '
 import { searchTermToRegexResult } from './regex.ts'
 import type { Command } from './types.ts'
 import { type FlagName, getFlags, setFlagDefaults, updateShortkeyHints } from './flagForm.ts'
+import { RegexSyntaxHighlighter, regexSyntaxHighlightTypes } from './syntaxHighlighting.ts'
 
 const commandMap: Record<Command, (e: CommandEvent) => void> = {
 	open,
@@ -200,12 +201,17 @@ export function toggleFlag(name: FlagName) {
 }
 
 function _updateSearch() {
+	for (const h of regexSyntaxHighlightTypes) {
+		CSS.highlights.delete(h)
+	}
+
 	const source = elements.textarea.value
 	const result = searchTermToRegexResult(source, getFlags(elements.flags))
 
-	elements.textarea.style.fontFamily = result.kind === 'full' || result.kind === 'error' || result.usesRegexSyntax
-		? 'var(--code-font)'
-		: 'var(--prose-font)'
+	const isRegex = result.kind === 'full' || result.kind === 'error' || result.usesRegexSyntax
+
+	elements.textarea.classList.toggle('code', isRegex)
+	elements.textarea.classList.toggle('prose', !isRegex)
 
 	if (result.kind === 'error') {
 		removeAllHighlights()
@@ -221,6 +227,13 @@ function _updateSearch() {
 	if (regex == null) {
 		removeAllHighlights()
 		return
+	}
+
+	const highlighter = new RegexSyntaxHighlighter(elements.textarea, regex, result.kind === 'full')
+	console.log(highlighter.debug())
+
+	for (const [name, highlight] of Object.entries(highlighter.highlights)) {
+		CSS.highlights.set(name, highlight)
 	}
 
 	ranges = getRanges(document.body, regex)

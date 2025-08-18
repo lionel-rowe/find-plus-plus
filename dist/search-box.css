@@ -58,3 +58,45 @@
 		}
 	}
 }
+
+.textarea {
+	&.code {
+		font-family: var(--code-font);
+	}
+	&.prose {
+		font-family: var(--prose-font);
+	}
+}
+
+/* regex syntax highlighting */
+
+::highlight(RegExpLiteral) {
+	color: lightslategray;
+}
+::highlight(Assertion), ::highlight(CharacterSet) {
+	color: palevioletred;
+}
+::highlight(Character), ::highlight(EscapedCharacter) {
+	color: lightgray;
+}
+::highlight(CharacterClass) {
+	color: orange;
+}
+::highlight(ExpressionCharacterClass) {
+	color: cornflowerblue;
+}
+::highlight(Group), ::highlight(CapturingGroup), ::highlight(Backreference) {
+	color: lightseagreen;
+}
+::highlight(Quantifier) {
+	color: violet;
+}
+::highlight(CharacterClassRange) {
+	color: lightgreen;
+}
+::highlight(ClassStringDisjunction) {
+	color: plum;
+}
+::highlight(ClassIntersection), ::highlight(ClassSubtraction) {
+	color: lightcoral;
+}

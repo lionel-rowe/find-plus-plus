@@ -33,11 +33,11 @@ type RegexErrorResult = {
 type RegexConfig = RegexSourceOnlyResult | RegexFullResult | RegexErrorResult
 
 export function searchTermToRegexResult(searchTerm: string, flagValues: Flags): RegexConfig {
-	try {
-		const m = searchTerm.match(REGEX_REGEX)
+	const m = searchTerm.match(REGEX_REGEX)
 
+	try {
 		if (m == null) {
-			const regex = createRegex(searchTerm, flagValues)
+			const regex = getRegexOrThrow(searchTerm, flagValues)
 
 			return {
 				kind: 'sourceOnly',
@@ -66,17 +66,30 @@ export function searchTermToRegexResult(searchTerm: string, flagValues: Flags): 
 	}
 }
 
-function createRegex(source: string, flagValues: Flags) {
+function getRegexOrThrow(source: string, flagValues: Flags) {
+	let firstError: SyntaxError
+
 	if (!flagValues.regexSyntax) {
 		source = RegExp.escape(source)
-	} else {
-		// gives a more concise error message in case of regex syntax error
-		new RegExp(source, 'v')
 	}
-	if (flagValues.wholeWord) source = `${startOfWord}${source}${endOfWord}`
-	const flags = combineFlags(flagValues.matchCase ? '' : 'i', 'gvm')
 
-	return new RegExp(source, flags)
+	for (const unicodeModeFlag of ['v', 'u', '']) {
+		try {
+			// gives a more concise error message in case of regex syntax error
+			new RegExp(source, unicodeModeFlag)
+		} catch (e) {
+			if (!(e instanceof SyntaxError)) throw e
+			firstError ??= e
+			continue
+		}
+
+		if (flagValues.wholeWord) source = `${startOfWord}${source}${endOfWord}`
+		const flags = combineFlags(unicodeModeFlag, flagValues.matchCase ? '' : 'i', 'gm')
+
+		return new RegExp(source, flags)
+	}
+
+	throw firstError!
 }
 
 function combineFlags(...flags: (string | null | false)[]) {
