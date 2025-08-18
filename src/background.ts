@@ -1,4 +1,4 @@
-import type { Command, Message } from './types.ts'
+import type { Command, Message, ShortkeyConfig } from './types.ts'
 
 // const IS_DEV_MODE = !Object.hasOwn(chrome.runtime.getManifest(), 'update_url')
 // if (IS_DEV_MODE) {
@@ -10,8 +10,15 @@ import type { Command, Message } from './types.ts'
 // 	})
 // }
 
-chrome.commands.onCommand.addListener((command, tab) => {
+chrome.commands.onCommand.addListener(async (_command, tab) => {
+	const command = _command as Command
 	if (tab?.id == null) return
-	const message: Message = { command: command as Command }
+	const commands = await chrome.commands.getAll()
+	const shortkeys = Object.fromEntries(
+		commands.map(({ name, shortcut, description }) => [name, { combo: shortcut, description }]),
+	) as ShortkeyConfig
+
+	const message: Message = { command, shortkeys }
+
 	chrome.tabs.sendMessage(tab.id, message)
 })

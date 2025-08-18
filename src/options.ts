@@ -1,5 +1,5 @@
 import { defaultOptions, TEMPLATE_ID } from './config.ts'
-import { getFlags, setFlagDefaults } from './flagForm.ts'
+import { getFlags, setFlagDefaults, updateShortkeyHints } from './flagForm.ts'
 import { html } from './populateTemplate.ts'
 import { optionsStorage } from './storage.ts'
 
@@ -34,6 +34,12 @@ async function saveOptions() {
 async function restoreOptions() {
 	const options = await optionsStorage.get(defaultOptions)
 	setFlagDefaults(elements.form, options)
+
+	const commands = await chrome.commands.getAll()
+	const shortkeys = Object.fromEntries(
+		commands.map(({ name, shortcut, description }) => [name, { combo: shortcut, description }]),
+	)
+	updateShortkeyHints(elements.form, shortkeys, false)
 }
 
 restoreOptions()

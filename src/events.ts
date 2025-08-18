@@ -1,5 +1,5 @@
 import { assert } from '@std/assert/assert'
-import type { AppOptions, Command } from './types.ts'
+import type { AppOptions, Command, ShortkeyConfig } from './types.ts'
 
 type AppEventType = `${typeof APP_ID}_${string}`
 const registeredTypes = new Set<string>()
@@ -33,6 +33,10 @@ export class UpdateOptionsEvent extends AppEvent<{ options: AppOptions }> {
 	static override readonly TYPE = makeAppEventType('updateOptions')
 }
 
-export class CommandEvent extends AppEvent<{ command: Command }> {
+export class CommandEvent extends AppEvent<{ command: Command; shortkeys: ShortkeyConfig }> {
 	static override readonly TYPE = makeAppEventType('command')
+}
+
+export class CloseEvent extends AppEvent {
+	static override readonly TYPE = makeAppEventType('close')
 }

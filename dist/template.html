@@ -10,8 +10,9 @@
 </style>
 
 <template id="__TEMPLATE_ID__">
-	<link rel="stylesheet" href="__STYLES_URL__">
-	<div class="regex-find">
+	<link rel="stylesheet" href="__COMMON_STYLES_URL__">
+	<link rel="stylesheet" href="__SEARCH_BOX_STYLES_URL__">
+	<div class="search-box">
 		<label class="label">
 			Find++
 			<div class="textarea" contenteditable="plaintext-only" spellcheck="false"></div>
@@ -27,7 +28,7 @@
 			</div>
 			<form class="flags">
 				<span>
-					<abbr title="Match case">
+					<abbr title="match-case">
 						<label for="match-case">
 							<span aria-hidden aria-label="Match case">
 								Aa</span></label><!--
@@ -39,13 +40,11 @@
 					</abbr>
 				</span>
 				<span>
-					<abbr title="Whole word">
+					<abbr title="whole-word">
 						<label for="whole-word">
 							<span aria-hidden aria-label="Whole word" class="underline-square-outer">
 								<span class="underline-square"></span>
-								<span class="underline-square-text">
-									ab
-								</span>
+								<span class="underline-square-text">ab</span>
 							</span>
 						</label><!--
 						 --><input
@@ -56,10 +55,10 @@
 					</abbr>
 				</span>
 				<span>
-					<abbr title="Enable regex syntax">
+					<abbr title="use-regex">
 						<label for="use-regex">
-							<span aria-hidden aria-label="Enable regex syntax">
-								.+</span></label><!--
+							<span aria-hidden aria-label="Enable regex syntax" class="regex-icon">
+								.*</span></label><!--
 						 --><input
 							type="checkbox"
 							id="use-regex"

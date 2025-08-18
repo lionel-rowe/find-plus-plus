@@ -6,5 +6,12 @@ export type AppOptions = {
 	'defaults.useRegex': boolean
 }
 
-export type Command = keyof typeof import('../dist/manifest.json', { with: { type: 'json' }})['commands'] | 'close'
-export type Message = { command: Command }
+export type Command = keyof typeof import('../dist/manifest.json', { with: { type: 'json' }})['commands']
+export type Message = {
+	command: Command
+	shortkeys: ShortkeyConfig
+}
+export type ShortkeyConfig = Record<Command, {
+	combo: string
+	description: string
+}>

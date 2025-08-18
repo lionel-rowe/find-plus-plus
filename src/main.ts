@@ -5,14 +5,13 @@ import { assert } from '@std/assert/assert'
 import { elements } from './elements.ts'
 import { TextNodeOffsetWalker } from './textNodeOffset.ts'
 import { throttle } from '@std/async/unstable-throttle'
-import { CommandEvent, NotifyReadyEvent, UpdateOptionsEvent } from './events.ts'
+import { CloseEvent, CommandEvent, NotifyReadyEvent, UpdateOptionsEvent } from './events.ts'
 import { searchTermToRegexResult } from './regex.ts'
 import type { Command } from './types.ts'
-import { type FlagName, getFlags, setFlagDefaults } from './flagForm.ts'
+import { type FlagName, getFlags, setFlagDefaults, updateShortkeyHints } from './flagForm.ts'
 
-const commandMap: Record<Command, () => void> = {
+const commandMap: Record<Command, (e: CommandEvent) => void> = {
 	open,
-	close,
 	matchCase: toggleFlag('match-case'),
 	wholeWord: toggleFlag('whole-word'),
 	useRegex: toggleFlag('use-regex'),
@@ -20,7 +19,7 @@ const commandMap: Record<Command, () => void> = {
 
 document.addEventListener(CommandEvent.TYPE, (e) => {
 	assert(e instanceof CommandEvent)
-	commandMap[e.detail.command]()
+	commandMap[e.detail.command](e)
 })
 
 document.addEventListener(UpdateOptionsEvent.TYPE, (e) => {
@@ -28,6 +27,8 @@ document.addEventListener(UpdateOptionsEvent.TYPE, (e) => {
 	const { options } = e.detail
 	setFlagDefaults(elements.flags, options)
 })
+
+document.addEventListener(CloseEvent.TYPE, close)
 
 document.dispatchEvent(new NotifyReadyEvent())
 
@@ -79,13 +80,17 @@ function getElementAncestor(range: Range) {
 let ranges: Range[] = []
 let rangeIndex = 0
 
-const cssLoaded = new Promise<void>((res) => {
-	const { style } = elements
-	if (style.sheet) return res()
-	else style.addEventListener('load', () => res(), { once: true })
-})
+const cssLoaded = Promise.all(
+	[...elements.container.shadowRoot!.querySelectorAll('link[rel=stylesheet]' as 'link')].map(async (style) => {
+		if (style.sheet == null) {
+			await new Promise<void>((res) => style.addEventListener('load', () => res(), { once: true }))
+		}
+	}),
+)
 
-async function open() {
+async function open(e: CommandEvent) {
+	updateShortkeyHints(elements.flags, e.detail.shortkeys, true)
+
 	await cssLoaded
 
 	elements.container.hidden = false

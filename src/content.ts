@@ -1,5 +1,5 @@
 import * as CONFIG from './config.ts'
-import { CommandEvent, NotifyReadyEvent, UpdateOptionsEvent } from './events.ts'
+import { CloseEvent, CommandEvent, NotifyReadyEvent, UpdateOptionsEvent } from './events.ts'
 import { optionsStorage } from './storage.ts'
 import type { Message } from './types.ts'
 import { html } from './populateTemplate.ts'
@@ -25,7 +25,7 @@ chrome.runtime.onMessage.addListener(async (message: Message) => {
 // plain `Escape` can't be handled by `chrome.commands` as commands must include Ctrl or Alt
 document.addEventListener('keydown', (e) => {
 	if (e.key === 'Escape') {
-		document.dispatchEvent(new CommandEvent({ command: 'close' }))
+		document.dispatchEvent(new CloseEvent())
 	}
 })
 

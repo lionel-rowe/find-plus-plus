@@ -15,15 +15,15 @@
 		},
 		"matchCase": {
 			"suggested_key": "Alt+C",
-			"description": "Toggle case-sensitive matching"
+			"description": "Match case-sensitively"
 		},
 		"wholeWord": {
 			"suggested_key": "Alt+W",
-			"description": "Toggle whole-word matching"
+			"description": "Only match whole words"
 		},
 		"useRegex": {
 			"suggested_key": "Alt+R",
-			"description": "Toggle regular expression syntax"
+			"description": "Use regular expression syntax"
 		}
 	},
 	"content_scripts": [
@@ -34,7 +34,7 @@
 	],
 	"web_accessible_resources": [
 		{
-			"resources": ["/main.js", "/template.html", "/styles.css"],
+			"resources": ["/main.js", "/template.html", "/common.css", "/search-box.css"],
 			"matches": ["<all_urls>"]
 		}
 	],

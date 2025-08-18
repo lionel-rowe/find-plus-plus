@@ -1,16 +1,9 @@
-:root, :host {
-	--border-color: #bbb;
-	--border-width: 1px;
-	--border-radius: 0.2rem;
-	color-scheme: dark;
-}
-
 :host([hidden]) {
 	/* in case of interference from badly behaved page styles (looking at you https://www.zoom.com/) */
 	display: none !important;
 }
 
-.regex-find {
+.search-box {
 	/* == Number.MAX_SAFE_INTEGER == 0x1fffffffffffff */
 	z-index: 9007199254740991;
 
@@ -64,50 +57,4 @@
 			}
 		}
 	}
-}
-
-.textarea {
-	padding: 0.3rem;
-	margin: 0.3rem 0;
-	border: var(--border-width) solid var(--border-color);
-	border-radius: var(--border-radius);
-	cursor: text;
-	--code-font: monospace;
-	--prose-font: sans-serif;
-	font-family: var(--code-font);
-	font-size-adjust: cap-height 0.6;
-	line-height: 1rem;
-}
-
-.flags:not([hidden]) {
-	display: flex;
-	gap: 0.5rem;
-	flex: 0 0 auto;
-}
-
-.flags :is(abbr, abbr label) {
-	text-decoration: none;
-	cursor: help;
-}
-
-.underline-square-outer {
-	position: relative;
-	display: inline-flex;
-	justify-content: center;
-}
-
-.underline-square {
-	position: absolute;
-	display: inline-flex;
-	width: 1.3em;
-	justify-content: center;
-	bottom: 0;
-	height: 0.2em;
-	border-color: white;
-	border-style: solid;
-	border-width: 0 1px 1px 1px;
-}
-
-.underline-square-text {
-	line-height: 1.3;
 }

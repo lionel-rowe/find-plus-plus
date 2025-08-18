@@ -1,5 +1,6 @@
 import { assert } from '@std/assert/assert'
-import type { AppOptions } from './types.ts'
+import type { AppOptions, ShortkeyConfig } from './types.ts'
+import { comboToPretty } from './shortkeys.ts'
 
 export type FlagName = 'use-regex' | 'match-case' | 'whole-word'
 
@@ -28,4 +29,19 @@ function isSet(form: HTMLFormElement, name: FlagName) {
 	const el = form.querySelector(`[name="${name}"]`)
 	assert(el instanceof HTMLInputElement && el.type === 'checkbox')
 	return el.checked
+}
+
+export function updateShortkeyHints(form: HTMLFormElement, shortkeys: ShortkeyConfig, showHint: boolean) {
+	const s: Record<FlagName, ShortkeyConfig[keyof ShortkeyConfig]> = {
+		'use-regex': shortkeys.useRegex,
+		'match-case': shortkeys.matchCase,
+		'whole-word': shortkeys.wholeWord,
+	}
+
+	for (const [k, v] of Object.entries(s)) {
+		const el = form.querySelector(`[name="${k}"]`)
+		assert(el instanceof HTMLInputElement && el.type === 'checkbox')
+		const label = el.labels![0]!.closest('abbr')!
+		label.title = [v.description, showHint && ` (${comboToPretty(v.combo)})`].filter(Boolean).join('')
+	}
 }
