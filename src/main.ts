@@ -10,6 +10,7 @@ import { searchTermToRegexResult } from './regex.ts'
 import type { Command } from './types.ts'
 import { type FlagName, getFlags, setFlagDefaults, updateShortkeyHints } from './flagForm.ts'
 import { RegexSyntaxHighlights, regexSyntaxHighlightTypes } from './syntaxHighlighting.ts'
+import { trimBy } from '@std/text/unstable-trim-by'
 
 const commandMap: Record<Command, (e: CommandEvent) => void> = {
 	open,
@@ -165,10 +166,10 @@ function setRangeIndex(value: IndexSetter) {
 	elements.infoMessage.textContent = `${rangeIndex + 1} of ${ranges.length}`
 }
 
-function scrollToRange(range: Range) {
+function scrollToRange(range: Range, behavior: ScrollBehavior = 'instant') {
 	// make sure the parent element is in view (including child scroll containers)
 	const element = getElementAncestor(range)
-	element.scrollIntoView({ behavior: 'instant', block: 'center', inline: 'center' })
+	element.scrollIntoView({ behavior, block: 'center', inline: 'center' })
 
 	// target the range's bounding box more acurately (ignores child scroll containers)
 	const rect = range.getBoundingClientRect()
@@ -177,10 +178,10 @@ function scrollToRange(range: Range) {
 	const totalWidth = document.documentElement.clientWidth
 
 	const options = {
-		behavior: 'instant',
+		behavior,
 		top: rect.top + window.scrollY - totalHeight / 2 - rect.height / 2,
 		left: rect.left + window.scrollY - totalWidth / 2 - rect.width / 2,
-	} as const
+	}
 	document.documentElement.scrollTo(options)
 }
 
@@ -188,6 +189,28 @@ const updateSearch = throttle(_updateSearch, (n) => n, { ensureLast: true })
 
 elements.textarea.addEventListener('input', updateSearch)
 elements.flags.addEventListener('change', updateSearch)
+
+const pastedTextConverters: Record<string, (s: string) => string> = {
+	'text/plain': (x) => x,
+	'text/html': (x) => new DOMParser().parseFromString(x, 'text/html').textContent ?? '',
+}
+
+elements.textarea.addEventListener('paste', (e) => {
+	if (onPaste(e.clipboardData)) e.preventDefault()
+})
+elements.textarea.addEventListener('drop', (e) => {
+	if (onPaste(e.dataTransfer)) e.preventDefault()
+})
+function onPaste(dt: DataTransfer | null): boolean {
+	if (dt == null) return false
+
+	for (const [mime, getText] of Object.entries(pastedTextConverters)) {
+		const val = dt.getData(mime)
+		if (val) return document.execCommand('insertText', false, trimBy(getText(val), /[\r\n]/))
+	}
+
+	return false
+}
 
 export function toggleFlag(name: FlagName) {
 	const el = elements.flags.querySelector(`[name="${name}"]`)
