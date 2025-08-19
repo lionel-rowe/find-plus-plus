@@ -11,6 +11,7 @@ import type { Command } from './types.ts'
 import { type FlagName, getFlags, setFlagDefaults, updateShortkeyHints } from './flagForm.ts'
 import { RegexSyntaxHighlights, regexSyntaxHighlightTypes } from './syntaxHighlighting.ts'
 import { trimBy } from '@std/text/unstable-trim-by'
+import { getScrollParent } from './scrollParent.ts'
 
 const commandMap: Record<Command, (e: CommandEvent) => void> = {
 	open,
@@ -167,11 +168,16 @@ function setRangeIndex(value: IndexSetter) {
 }
 
 function scrollToRange(range: Range, behavior: ScrollBehavior = 'instant') {
-	// make sure the parent element is in view (including child scroll containers)
+	// Make sure the parent element is in view (including child scroll containers).
+	// `scrollIntoView` is an order of magnitude slower than `scrollTo`, so we avoid calling
+	// it if the scroll parent is the document root
 	const element = getElementAncestor(range)
-	element.scrollIntoView({ behavior, block: 'center', inline: 'center' })
+	const scrollParent = getScrollParent(element)
+	if (scrollParent != null) {
+		element.scrollIntoView({ behavior, block: 'center', inline: 'center' })
+	}
 
-	// target the range's bounding box more acurately (ignores child scroll containers)
+	// target the range's bounding box more acurately
 	const rect = range.getBoundingClientRect()
 
 	const totalHeight = document.documentElement.clientHeight
