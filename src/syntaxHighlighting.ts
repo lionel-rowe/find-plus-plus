@@ -1,12 +1,14 @@
 import type { AST } from '@eslint-community/regexpp'
 import { RegExpParser } from '@eslint-community/regexpp'
 import { TextNodeOffsetWalker } from './textNodeOffset.ts'
+import { elements } from './elements.ts'
+import { namespaced } from './config.ts'
 
 const parser = new RegExpParser()
 
 type HighlightType = AST.Node['type'] | 'EscapedCharacter'
 
-type HighlightMap = Record<HighlightType, Highlight>
+type HighlightResult = [HighlightType, Range][]
 
 // keep in order of granularity (big->small) to ensure highlighting works properly
 export const regexSyntaxHighlightTypes = [
@@ -40,6 +42,16 @@ export const regexSyntaxHighlightTypes = [
 	'Character',
 ] as const satisfies HighlightType[]
 
+const sheet = new CSSStyleSheet()
+elements.container.shadowRoot!.adoptedStyleSheets.push(sheet)
+let priority = 0
+for (const name of regexSyntaxHighlightTypes) {
+	const hl = new Highlight()
+	hl.priority = priority++
+	CSS.highlights.set(namespaced(name), hl)
+	sheet.insertRule(`::highlight(${namespaced(name)}) { color: var(--syntax-${name}); }`)
+}
+
 // keep types in sync
 void (() => {
 	let _!: Exclude<HighlightType, typeof regexSyntaxHighlightTypes[number]>
@@ -47,22 +59,21 @@ void (() => {
 	_.valueOf()
 })
 
-export class RegexSyntaxHighlighter {
-	readonly highlights: HighlightMap
+export class RegexSyntaxHighlights {
+	readonly result: HighlightResult
 	#source: string
 	#isFullRegex: boolean
 	#regex: RegExp
 	#element: HTMLElement
+	#walker: TextNodeOffsetWalker
 
 	constructor(element: HTMLElement, regex: RegExp, isFullRegex: boolean) {
 		this.#regex = regex
 		this.#isFullRegex = isFullRegex
 		this.#source = element.textContent!
-		this.highlights = Object.fromEntries(
-			regexSyntaxHighlightTypes.map((t) => [t, new Highlight()]),
-		) as HighlightMap
-
+		this.result = []
 		this.#element = element
+		this.#walker = new TextNodeOffsetWalker(this.#element)
 
 		try {
 			this.#populateHighlights()
@@ -72,11 +83,7 @@ export class RegexSyntaxHighlighter {
 	}
 
 	debug() {
-		return Object.fromEntries(
-			Object.entries(this.highlights)
-				.map(([name, highlight]) => [name, [...highlight.keys()].map((range) => range.toString())])
-				.filter((x) => x[1].length),
-		)
+		return this.result.map(([name, range]) => [name, range.toString(), range.startOffset, range.endOffset])
 	}
 
 	#populateHighlights() {
@@ -85,28 +92,27 @@ export class RegexSyntaxHighlighter {
 	}
 
 	#handlePattern() {
-		const pattern = parser.parsePattern(this.#source, ...[, ,], this.#regex)
-		this.#handleAstElement(pattern)
+		this.#handleElement(parser.parsePattern(this.#source, ...[, ,], this.#regex))
 	}
 
 	#handleRegex() {
-		const regex = parser.parseLiteral(this.#source)
-		this.#handleAstElement(regex)
+		this.#handleElement(parser.parseLiteral(this.#source))
 	}
 
-	#handleAstElement(el: AST.Node) {
-		const highlightMap = this.highlights
+	#handleElement(el: AST.Node) {
+		const { result: highlights } = this
+		const walker = this.#walker
 
-		if (el.type === 'Character') {
-			const kind = `${el.raw.startsWith('\\') ? 'Escaped' : ''}Character` as const
-			highlightMap[kind].add(this.#getRange(el))
-		} else {
-			highlightMap[el.type].add(this.#getRange(el))
-		}
+		const kind = el.type === 'Character' ? `${el.raw.startsWith('\\') ? 'Escaped' : ''}Character` as const : el.type
+
+		const range = new Range()
+		highlights.push([kind, range])
+
+		range.setStart(...walker.next(el.start)!)
 
 		switch (el.type) {
 			case 'RegExpLiteral': {
-				this.#handleAstElement(el.pattern)
+				this.#handleElement(el.pattern)
 				break
 			}
 			case 'Modifiers':
@@ -121,31 +127,31 @@ export class RegexSyntaxHighlighter {
 			case 'CharacterClass':
 			case 'StringAlternative':
 			case 'Alternative': {
-				for (const child of el.elements) this.#handleAstElement(child)
+				for (const child of el.elements) this.#handleElement(child)
 				break
 			}
 			case 'Group':
 			case 'CapturingGroup':
 			case 'ClassStringDisjunction':
 			case 'Pattern': {
-				for (const child of el.alternatives) this.#handleAstElement(child)
+				for (const child of el.alternatives) this.#handleElement(child)
 				break
 			}
 			case 'CharacterClassRange': {
-				for (const child of [el.min, el.max]) this.#handleAstElement(child)
+				for (const child of [el.min, el.max]) this.#handleElement(child)
 				break
 			}
 			case 'ExpressionCharacterClass': {
-				this.#handleAstElement(el.expression)
+				this.#handleElement(el.expression)
 				break
 			}
 			case 'Quantifier': {
-				this.#handleAstElement(el.element)
+				this.#handleElement(el.element)
 				break
 			}
 			case 'ClassIntersection':
 			case 'ClassSubtraction': {
-				for (const child of [el.left, el.right]) this.#handleAstElement(child)
+				for (const child of [el.left, el.right]) this.#handleElement(child)
 				break
 			}
 			default: {
@@ -153,13 +159,7 @@ export class RegexSyntaxHighlighter {
 				el.type
 			}
 		}
-	}
 
-	#getRange(x: { start: number; end: number }) {
-		const walker = new TextNodeOffsetWalker(this.#element)
-		const range = new Range()
-		range.setStart(...walker.next(x.start)!)
-		range.setEnd(...walker.next(x.end)!)
-		return range
+		range.setEnd(...walker.next(el.end)!)
 	}
 }

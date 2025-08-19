@@ -1,5 +1,5 @@
 import './defineCustomElement.ts'
-import { HIGHLIGHT_ALL_ID, HIGHLIGHT_ONE_ID } from './config.ts'
+import { HIGHLIGHT_ALL_ID, HIGHLIGHT_ONE_ID, namespaced } from './config.ts'
 import { modulo } from './utils.ts'
 import { assert } from '@std/assert/assert'
 import { elements } from './elements.ts'
@@ -9,7 +9,7 @@ import { CloseEvent, CommandEvent, NotifyReadyEvent, UpdateOptionsEvent } from '
 import { searchTermToRegexResult } from './regex.ts'
 import type { Command } from './types.ts'
 import { type FlagName, getFlags, setFlagDefaults, updateShortkeyHints } from './flagForm.ts'
-import { RegexSyntaxHighlighter, regexSyntaxHighlightTypes } from './syntaxHighlighting.ts'
+import { RegexSyntaxHighlights, regexSyntaxHighlightTypes } from './syntaxHighlighting.ts'
 
 const commandMap: Record<Command, (e: CommandEvent) => void> = {
 	open,
@@ -229,10 +229,14 @@ function _updateSearch() {
 		return
 	}
 
-	const highlighter = new RegexSyntaxHighlighter(elements.textarea, regex, result.kind === 'full')
+	const highlights = new RegexSyntaxHighlights(elements.textarea, regex, result.kind === 'full')
 
-	for (const [name, highlight] of Object.entries(highlighter.highlights)) {
-		CSS.highlights.set(name, highlight)
+	for (const name of regexSyntaxHighlightTypes) {
+		CSS.highlights.get(namespaced(name))!.clear()
+	}
+
+	for (const [name, range] of highlights.result) {
+		CSS.highlights.get(namespaced(name))!.add(range)
 	}
 
 	ranges = getRanges(document.body, regex)

@@ -3,6 +3,32 @@
 	display: none !important;
 }
 
+:host {
+	/* regex syntax highlighting */
+	--syntax-RegExpLiteral: lightslategray;
+
+	--syntax-Assertion: lightcoral;
+	--syntax-CharacterSet: lightcoral;
+	--syntax-ClassStringDisjunction: lightcoral;
+
+	--syntax-Character: lightgray;
+
+	--syntax-CharacterClass: goldenrod;
+	--syntax-CharacterClassRange: goldenrod;
+	--syntax-ExpressionCharacterClass: goldenrod;
+
+	--syntax-Group: cornflowerblue;
+	--syntax-CapturingGroup: cornflowerblue;
+	--syntax-Backreference: cornflowerblue;
+
+	--syntax-Quantifier: lightgreen;
+
+	--syntax-EscapedCharacter: plum;
+
+	--syntax-ClassIntersection: lightseagreen;
+	--syntax-ClassSubtraction: lightseagreen;
+}
+
 .search-box {
 	/* == Number.MAX_SAFE_INTEGER == 0x1fffffffffffff */
 	z-index: 9007199254740991;
@@ -66,31 +92,4 @@
 	&.prose {
 		font-family: var(--prose-font);
 	}
-}
-
-/* regex syntax highlighting */
-
-::highlight(RegExpLiteral) {
-	color: lightslategray;
-}
-::highlight(Assertion), ::highlight(CharacterSet), ::highlight(ClassStringDisjunction) {
-	color: lightcoral;
-}
-::highlight(Character) {
-	color: lightgray;
-}
-::highlight(CharacterClass), ::highlight(CharacterClassRange), ::highlight(ExpressionCharacterClass) {
-	color: goldenrod;
-}
-::highlight(Group), ::highlight(CapturingGroup), ::highlight(Backreference) {
-	color: cornflowerblue;
-}
-::highlight(Quantifier) {
-	color: lightgreen;
-}
-::highlight(EscapedCharacter) {
-	color: plum;
-}
-::highlight(ClassIntersection), ::highlight(ClassSubtraction) {
-	color: lightseagreen;
 }
