@@ -174,7 +174,7 @@ function scrollToRange(range: Range, behavior: ScrollBehavior = 'instant') {
 	const element = getElementAncestor(range)
 	const scrollParent = getScrollParent(element)
 	if (scrollParent != null) {
-		element.scrollIntoView({ behavior, block: 'center', inline: 'center' })
+		element.scrollIntoView({ behavior, block: 'nearest', inline: 'nearest' })
 	}
 
 	// target the range's bounding box more acurately

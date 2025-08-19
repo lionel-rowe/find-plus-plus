@@ -1,7 +1,9 @@
 import { defaultOptions, TEMPLATE_ID } from './config.ts'
 import { getFlags, setFlagDefaults, updateShortkeyHints } from './flagForm.ts'
-import { html } from './populateTemplate.ts'
+import { getHtml } from './populateTemplate.ts'
 import { optionsStorage } from './storage.ts'
+
+const html = await getHtml()
 
 const elements = {
 	shortkey: document.getElementById('shortkey') as HTMLInputElement,
