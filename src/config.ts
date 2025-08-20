@@ -10,7 +10,8 @@ export const GET_MATCHES_REQUEST = namespaced('get-matches-request')
 export const GET_MATCHES_RESPONSE = namespaced('get-matches-response')
 
 export const defaultOptions: AppOptions = {
-	maxMatches: 5000,
+	maxTimeout: 5000, // 5 seconds
+	maxMatches: 2000,
 
 	'defaults.matchCase': false,
 	'defaults.wholeWord': false,

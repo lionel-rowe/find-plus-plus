@@ -40,23 +40,46 @@
 			</div>
 
 			<div>
-				<h2>Other Options</h2>
-				<div class="fields">
-					<label for="max-matches">
-						Max matches
-						<input
-							type="number"
-							id="max-matches"
-							name="max-matches"
-							min="1"
-							step="1"
-							aria-describedby="max-matches-hint"
-						>
-					</label>
+				<h2>Performance</h2>
 
+				<div class="fields">
 					<div>
-						<small id="max-matches-hint"
-						>Limit the maximum number of matches to find (smaller = faster performance).</small>
+						<label for="max-timeout">
+							Max timeout
+							<input
+								type="number"
+								id="max-timeout"
+								name="max-timeout"
+								min="1"
+								step="1"
+								aria-describedby="max-timeout-hint"
+							>
+						</label>
+
+						<div>
+							<small id="max-timeout-hint">
+								The maximum amount of time to attempt to find matches, in milliseconds.
+							</small>
+						</div>
+					</div>
+					<div>
+						<label for="max-matches">
+							Max matches
+							<input
+								type="number"
+								id="max-matches"
+								name="max-matches"
+								min="1"
+								step="1"
+								aria-describedby="max-matches-hint"
+							>
+						</label>
+
+						<div>
+							<small id="max-matches-hint">
+								Limit the maximum number of matches to find (smaller = faster performance).
+							</small>
+						</div>
 					</div>
 				</div>
 			</div>

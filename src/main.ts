@@ -68,13 +68,19 @@ function getWorker() {
 }
 
 let worker: Worker | null = null
+let ac: AbortController | null = null
 
 async function* getMatches({ source, flags, text }: Pick<GetMatchesRequestData, 'source' | 'flags' | 'text'>) {
 	worker?.terminate()
+	ac?.abort()
 	const w = worker = getWorker()
+	ac = new AbortController()
 
-	const BATCH_SIZE = 500
+	const PAGE_SIZE = 500
 	let i = 0
+
+	const signal = AbortSignal.any([ac.signal, AbortSignal.timeout(options.maxTimeout)])
+	signal.addEventListener('abort', () => w.terminate())
 
 	while (true) {
 		const message: GetMatchesRequestData = {
@@ -82,16 +88,22 @@ async function* getMatches({ source, flags, text }: Pick<GetMatchesRequestData, 
 			source,
 			flags,
 			text,
-			start: (i++) * BATCH_SIZE,
-			num: BATCH_SIZE,
+			start: (i++) * PAGE_SIZE,
+			num: PAGE_SIZE,
 		}
 		const [{ results }] = await Promise.all([
-			new Promise<GetMatchesResponseData>((res) =>
-				w.addEventListener('message', (e) => {
-					assert(e.data.kind === GET_MATCHES_RESPONSE)
-					res(e.data)
-				}, { once: true })
-			),
+			Promise.race([
+				new Promise<GetMatchesResponseData>((res) =>
+					w.addEventListener('message', (e) => {
+						assert(e.data.kind === GET_MATCHES_RESPONSE)
+						res(e.data)
+					}, { once: true, signal })
+				),
+				new Promise<never>((_, rej) => {
+					w.addEventListener('error', rej, { once: true, signal })
+					signal.addEventListener('abort', rej)
+				}),
+			]),
 			w.postMessage(message),
 		])
 

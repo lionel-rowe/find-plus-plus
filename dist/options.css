@@ -35,9 +35,9 @@ input[type='color'] {
 .fields {
 	display: flex;
 	flex-direction: column;
+	gap: 1rem;
 
 	&.inline {
-		gap: 1rem;
 		flex-direction: row;
 	}
 

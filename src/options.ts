@@ -11,6 +11,7 @@ function getElements() {
 	const elements = {
 		shortkey: document.getElementById('shortkey') as HTMLInputElement,
 		status: document.getElementById('status') as HTMLElement,
+		maxTimeout: document.querySelector('[name=max-timeout]') as HTMLInputElement,
 		maxMatches: document.querySelector('[name=max-matches]') as HTMLInputElement,
 		colors: {
 			all: form.querySelector('[name="colors.all"]') as HTMLInputElement,
@@ -35,6 +36,7 @@ async function saveOptions() {
 	const flags = getFlags(elements.form)
 
 	await optionsStorage.set({
+		maxTimeout: clamp(elements.maxTimeout.valueAsNumber | 0, 1, Infinity),
 		maxMatches: clamp(elements.maxMatches.valueAsNumber | 0, 1, Infinity),
 
 		'defaults.useRegex': flags.regexSyntax,
@@ -55,6 +57,7 @@ async function saveOptions() {
 async function restoreOptions() {
 	const options = await optionsStorage.get(defaultOptions)
 	setFlagDefaults(elements.form, options)
+	elements.maxTimeout.valueAsNumber = options.maxTimeout
 	elements.maxMatches.valueAsNumber = options.maxMatches
 
 	elements.colors.all.value = options['colors.all']

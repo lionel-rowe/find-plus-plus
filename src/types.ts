@@ -1,6 +1,7 @@
 import '@types/chrome'
 
 export type AppOptions = {
+	maxTimeout: number
 	maxMatches: number
 
 	'defaults.matchCase': boolean
