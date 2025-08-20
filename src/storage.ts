@@ -10,5 +10,8 @@ function storage<T extends Record<string, unknown>>(storageType: chrome.storage.
 		async set(x: Partial<T>) {
 			return await chrome.storage[storageType].set(x)
 		},
+		async clear() {
+			return await chrome.storage[storageType].clear()
+		},
 	}
 }

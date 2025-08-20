@@ -1,5 +1,5 @@
 import './defineCustomElement.ts'
-import { HIGHLIGHT_ALL_ID, HIGHLIGHT_ONE_ID, namespaced } from './config.ts'
+import { defaultOptions, HIGHLIGHT_ALL_ID, HIGHLIGHT_CURRENT_ID, HIGHLIGHT_TEXT_ID, namespaced } from './config.ts'
 import { modulo } from './utils.ts'
 import { assert } from '@std/assert/assert'
 import { elements } from './elements.ts'
@@ -7,11 +7,13 @@ import { TextNodeOffsetWalker } from './textNodeOffset.ts'
 import { throttle } from '@std/async/unstable-throttle'
 import { CloseEvent, CommandEvent, NotifyReadyEvent, UpdateOptionsEvent } from './events.ts'
 import { searchTermToRegexResult } from './regex.ts'
-import type { Command } from './types.ts'
+import type { AppOptions, Command } from './types.ts'
 import { type FlagName, getFlags, setFlagDefaults, updateShortkeyHints } from './flagForm.ts'
 import { RegexSyntaxHighlights, regexSyntaxHighlightTypes } from './syntaxHighlighting.ts'
 import { trimBy } from '@std/text/unstable-trim-by'
 import { getScrollParent } from './scrollParent.ts'
+
+let options = defaultOptions
 
 const commandMap: Record<Command, (e: CommandEvent) => void> = {
 	open,
@@ -27,18 +29,22 @@ document.addEventListener(CommandEvent.TYPE, (e) => {
 
 document.addEventListener(UpdateOptionsEvent.TYPE, (e) => {
 	assert(e instanceof UpdateOptionsEvent)
-	const { options } = e.detail
+	options = e.detail.options
 	setFlagDefaults(elements.flags, options)
+	setColors(options)
 })
+
+function setColors(options: AppOptions) {
+	document.documentElement.style.setProperty(`--${HIGHLIGHT_ALL_ID}`, options['colors.all'])
+	document.documentElement.style.setProperty(`--${HIGHLIGHT_CURRENT_ID}`, options['colors.current'])
+	document.documentElement.style.setProperty(`--${HIGHLIGHT_TEXT_ID}`, options['colors.text'])
+}
 
 document.addEventListener(CloseEvent.TYPE, close)
 
 document.dispatchEvent(new NotifyReadyEvent())
 
 let isOpen = false
-
-// limit for perf reasons. limit number might need tweaking
-const MAX_MATCHES = 5000
 
 function getRanges(element: HTMLElement, regex: RegExp) {
 	const text = element.textContent ?? ''
@@ -59,7 +65,7 @@ function getRanges(element: HTMLElement, regex: RegExp) {
 
 			if (filter(range, m[0])) {
 				ranges.push(range)
-				if (++i === MAX_MATCHES) break
+				if (++i === options.maxMatches) break
 			}
 		}
 	} catch (e) {
@@ -105,11 +111,16 @@ async function open(e: CommandEvent) {
 function close() {
 	elements.container.hidden = true
 	CSS.highlights.delete(HIGHLIGHT_ALL_ID)
-	CSS.highlights.delete(HIGHLIGHT_ONE_ID)
+	CSS.highlights.delete(HIGHLIGHT_CURRENT_ID)
 	isOpen = false
 }
 
 elements.textarea.addEventListener('keydown', (e) => {
+	// prevent simple inputs like `<kbd>e</kbd>` on sites like GitHub from acting as site shortcuts when typing normally
+	if (/^.$/.test(e.key) && !e.ctrlKey && !e.altKey && !e.metaKey) {
+		e.stopPropagation()
+	}
+
 	if (e.key === 'Enter') {
 		e.preventDefault()
 
@@ -151,7 +162,7 @@ function setRangeIndex(value: IndexSetter) {
 	if (!ranges.length) {
 		elements.info.classList.add('empty')
 		elements.infoMessage.textContent = elements.textarea.value ? 'No results' : ''
-		CSS.highlights.delete(HIGHLIGHT_ONE_ID)
+		CSS.highlights.delete(HIGHLIGHT_CURRENT_ID)
 		return
 	}
 
@@ -160,7 +171,7 @@ function setRangeIndex(value: IndexSetter) {
 	rangeIndex = modulo(typeof value === 'function' ? value(rangeIndex) : value, ranges.length)
 	const range = ranges[rangeIndex]!
 
-	CSS.highlights.set(HIGHLIGHT_ONE_ID, new Highlight(range))
+	CSS.highlights.set(HIGHLIGHT_CURRENT_ID, new Highlight(range))
 
 	scrollToRange(range)
 
