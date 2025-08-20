@@ -64,12 +64,16 @@ export class RegexSyntaxHighlights {
 	readonly result: HighlightResult
 	#source: string
 	#isFullRegex: boolean
-	#regex: RegExp
+	#unicodeConfig: Partial<Record<'unicode' | 'unicodeSets', boolean>>
 	#element: HTMLElement
 	#walker: TextNodeOffsetWalker
 
-	constructor(element: HTMLElement, regex: RegExp, isFullRegex: boolean) {
-		this.#regex = regex
+	constructor(
+		element: HTMLElement,
+		unicodeConfig: Partial<Record<'unicode' | 'unicodeSets', boolean>>,
+		isFullRegex: boolean,
+	) {
+		this.#unicodeConfig = unicodeConfig
 		this.#isFullRegex = isFullRegex
 		this.#source = element.textContent!
 		this.result = []
@@ -93,7 +97,7 @@ export class RegexSyntaxHighlights {
 	}
 
 	#handlePattern() {
-		this.#handleElement(parser.parsePattern(this.#source, ...[, ,], this.#regex))
+		this.#handleElement(parser.parsePattern(this.#source, ...[, ,], this.#unicodeConfig))
 	}
 
 	#handleRegex() {

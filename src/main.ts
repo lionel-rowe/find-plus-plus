@@ -301,16 +301,20 @@ async function _updateSearch() {
 
 	elements.flags.hidden = kind === 'full'
 
-	if (regex == null) {
-		removeAllHighlights()
-		return
-	}
-
 	if (isRegex) {
-		const highlights = new RegexSyntaxHighlights(elements.textarea, regex, result.kind === 'full')
+		const highlights = new RegexSyntaxHighlights(
+			elements.textarea,
+			regex ?? { unicodeSets: true },
+			result.kind === 'full',
+		)
 		for (const [name, range] of highlights.result) {
 			CSS.highlights.get(namespaced(name))!.add(range)
 		}
+	}
+
+	if (regex == null) {
+		removeAllHighlights()
+		return
 	}
 
 	ranges = await getRanges(document.body, regex)
