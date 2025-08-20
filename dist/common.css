@@ -1,8 +1,9 @@
 :root, :host {
+	color-scheme: dark;
+
 	--border-color: #bbb;
 	--border-width: 1px;
 	--border-radius: 0.2rem;
-	color-scheme: dark;
 
 	--accent-color: #00cc6a;
 
@@ -63,31 +64,4 @@
 	line-height: 1;
 	transform: rotate(10deg);
 	display: inline-flex;
-}
-
-button {
-	--button-bg: ButtonFace;
-	--button-color: ButtonText;
-
-	background: var(--button-bg);
-	color: var(--button-color);
-	border: none;
-	padding: 0.3rem 0.5rem;
-	border-radius: var(--border-radius);
-	cursor: pointer;
-	min-width: 5rem;
-	min-height: 1.8rem;
-	display: inline-flex;
-	align-items: center;
-	justify-content: center;
-	line-height: 1;
-
-	&:hover {
-		background: color-mix(in srgb, var(--button-bg), white 30%);
-	}
-
-	&[type='submit'] {
-		--button-bg: var(--accent-color);
-		--button-color: var(--accent-text-color);
-	}
 }

@@ -8,7 +8,6 @@ export async function getHtml() {
 	const config = {
 		...ids,
 		SEARCH_BOX_STYLES_URL: chrome.runtime.getURL('/search-box.css'),
-		COMMON_STYLES_URL: chrome.runtime.getURL('/common.css'),
 	}
 	return template.replaceAll(/__(\w+)__/g, (_, key) => {
 		const val = config[key as keyof typeof config]

@@ -6,6 +6,9 @@ export const HIGHLIGHT_ALL_ID = namespaced('all')
 export const HIGHLIGHT_CURRENT_ID = namespaced('current')
 export const HIGHLIGHT_TEXT_ID = namespaced('text')
 
+export const GET_MATCHES_REQUEST = namespaced('get-matches-request')
+export const GET_MATCHES_RESPONSE = namespaced('get-matches-response')
+
 export const defaultOptions: AppOptions = {
 	maxMatches: 5000,
 

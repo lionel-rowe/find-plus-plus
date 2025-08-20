@@ -10,7 +10,7 @@
 				}
 			}
 		</style>
-		<link rel="stylesheet" href="common.css">
+		<link rel="stylesheet" href="options.css">
 	</head>
 
 	<body>
@@ -25,32 +25,35 @@
 
 			<div>
 				<h2>Colors</h2>
-				<div>
-					<label for="colors.all">All: </label>
-					<input type="color" id="colors.all" name="colors.all">
-				</div>
-				<div>
-					<label for="colors.current">Current: </label>
-					<input type="color" id="colors.current" name="colors.current">
-				</div>
-				<div>
-					<label for="colors.text">Text: </label>
-					<input type="color" id="colors.text" name="colors.text">
+				<div class="fields inline">
+					<label for="colors.all">All <input type="color" id="colors.all" name="colors.all"></label>
+					<label for="colors.current">
+						Current
+						<input
+							type="color"
+							id="colors.current"
+							name="colors.current"
+						>
+					</label>
+					<label for="colors.text">Text <input type="color" id="colors.text" name="colors.text"></label>
 				</div>
 			</div>
 
 			<div>
 				<h2>Other Options</h2>
-				<div>
-					<label for="max-matches">Max matches: </label>
-					<input
-						type="number"
-						id="max-matches"
-						name="max-matches"
-						min="1"
-						step="1"
-						aria-describedby="max-matches-hint"
-					>
+				<div class="fields">
+					<label for="max-matches">
+						Max matches
+						<input
+							type="number"
+							id="max-matches"
+							name="max-matches"
+							min="1"
+							step="1"
+							aria-describedby="max-matches-hint"
+						>
+					</label>
+
 					<div>
 						<small id="max-matches-hint"
 						>Limit the maximum number of matches to find (smaller = faster performance).</small>

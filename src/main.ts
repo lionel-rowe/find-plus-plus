@@ -1,5 +1,13 @@
 import './defineCustomElement.ts'
-import { defaultOptions, HIGHLIGHT_ALL_ID, HIGHLIGHT_CURRENT_ID, HIGHLIGHT_TEXT_ID, namespaced } from './config.ts'
+import {
+	defaultOptions,
+	GET_MATCHES_REQUEST,
+	GET_MATCHES_RESPONSE,
+	HIGHLIGHT_ALL_ID,
+	HIGHLIGHT_CURRENT_ID,
+	HIGHLIGHT_TEXT_ID,
+	namespaced,
+} from './config.ts'
 import { modulo } from './utils.ts'
 import { assert } from '@std/assert/assert'
 import { elements } from './elements.ts'
@@ -13,6 +21,8 @@ import { RegexSyntaxHighlights, regexSyntaxHighlightTypes } from './syntaxHighli
 import { trimBy } from '@std/text/unstable-trim-by'
 import { scrollIntoView } from './scrollToRange.ts'
 import { getElementAncestor } from './scrollParent.ts'
+import type { GetMatchesRequestData } from './worker.ts'
+import { GetMatchesResponseData, workerFn } from './worker.ts'
 
 let options = defaultOptions
 
@@ -47,7 +57,50 @@ document.dispatchEvent(new NotifyReadyEvent())
 
 let isOpen = false
 
-function getRanges(element: HTMLElement, regex: RegExp) {
+const workerUrl = URL.createObjectURL(
+	new Blob([`(${workerFn.toString()})(${JSON.stringify({ GET_MATCHES_REQUEST, GET_MATCHES_RESPONSE })})`], {
+		type: 'application/javascript',
+	}),
+)
+
+function getWorker() {
+	return new Worker(workerUrl, { type: 'module' })
+}
+
+let worker: Worker | null = null
+
+async function* getMatches({ source, flags, text }: Pick<GetMatchesRequestData, 'source' | 'flags' | 'text'>) {
+	worker?.terminate()
+	const w = worker = getWorker()
+
+	const BATCH_SIZE = 500
+	let i = 0
+
+	while (true) {
+		const message: GetMatchesRequestData = {
+			kind: GET_MATCHES_REQUEST,
+			source,
+			flags,
+			text,
+			start: (i++) * BATCH_SIZE,
+			num: BATCH_SIZE,
+		}
+		const [{ results }] = await Promise.all([
+			new Promise<GetMatchesResponseData>((res) =>
+				w.addEventListener('message', (e) => {
+					assert(e.data.kind === GET_MATCHES_RESPONSE)
+					res(e.data)
+				}, { once: true })
+			),
+			w.postMessage(message),
+		])
+
+		yield* results
+		if (results.length === 0) break
+	}
+}
+
+async function getRanges(element: HTMLElement, regex: RegExp) {
 	const text = element.textContent ?? ''
 
 	const ranges: Range[] = []
@@ -56,9 +109,9 @@ function getRanges(element: HTMLElement, regex: RegExp) {
 		const walker = new TextNodeOffsetWalker(element)
 
 		let i = 0
-		for (const m of text.matchAll(regex)) {
-			const start = walker.next(m.index)
-			const end = walker.next(m.index + m[0].length)
+		for await (const { index, arr: m } of getMatches({ text, source: regex.source, flags: regex.flags })) {
+			const start = walker.next(index)
+			const end = walker.next(index + m[0].length)
 			assert(start != null && end != null)
 			const range = new Range()
 			range.setStart(...start)
@@ -66,7 +119,7 @@ function getRanges(element: HTMLElement, regex: RegExp) {
 
 			if (filter(range, m[0])) {
 				ranges.push(range)
-				if (++i === options.maxMatches) break
+				if (++i === options.maxMatches) break /*  */
 			}
 		}
 	} catch (e) {
@@ -212,7 +265,7 @@ export function toggleFlag(name: FlagName) {
 	}
 }
 
-function _updateSearch() {
+async function _updateSearch() {
 	for (const name of regexSyntaxHighlightTypes) {
 		CSS.highlights.get(namespaced(name))!.clear()
 	}
@@ -248,7 +301,7 @@ function _updateSearch() {
 		}
 	}
 
-	ranges = getRanges(document.body, regex)
+	ranges = await getRanges(document.body, regex)
 	rangeIndex = 0
 
 	CSS.highlights.set(HIGHLIGHT_ALL_ID, new Highlight(...ranges))

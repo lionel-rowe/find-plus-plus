@@ -1,0 +1,55 @@
+@import url('./common.css');
+
+button {
+	--button-bg: ButtonFace;
+	--button-color: ButtonText;
+
+	background: var(--button-bg);
+	color: var(--button-color);
+	border: none;
+	padding: 0.3rem 0.5rem;
+	border-radius: var(--border-radius);
+	cursor: pointer;
+	min-width: 5rem;
+	min-height: 1.8rem;
+	display: inline-flex;
+	align-items: center;
+	justify-content: center;
+	line-height: 1;
+
+	&:hover {
+		background: color-mix(in srgb, var(--button-bg), white 30%);
+	}
+
+	&[type='submit'] {
+		--button-bg: var(--accent-color);
+		--button-color: var(--accent-text-color);
+	}
+}
+
+input[type='color'] {
+	border: 1px solid color-mix(in srgb, ButtonBorder, transparent 60%);
+	border-radius: 0.2rem;
+}
+
+.fields {
+	display: flex;
+	flex-direction: column;
+
+	&.inline {
+		gap: 1rem;
+		flex-direction: row;
+	}
+
+	label {
+		display: flex;
+		flex-direction: column;
+		gap: 0.1rem;
+		font-size: 0.6rem;
+		font-weight: bold;
+
+		input {
+			max-width: 8rem;
+		}
+	}
+}
