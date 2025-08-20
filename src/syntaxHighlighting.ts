@@ -6,7 +6,7 @@ import { namespaced } from './config.ts'
 
 const parser = new RegExpParser()
 
-type HighlightType = AST.Node['type'] | 'EscapedCharacter'
+type HighlightType = AST.Node['type'] | 'EscapedCharacter' | 'Lookaround'
 
 type HighlightResult = [HighlightType, Range][]
 
@@ -24,6 +24,7 @@ export const regexSyntaxHighlightTypes = [
 	'Group',
 	'CapturingGroup',
 	'Backreference',
+	'Lookaround',
 
 	'ExpressionCharacterClass',
 
@@ -103,7 +104,11 @@ export class RegexSyntaxHighlights {
 		const { result: highlights } = this
 		const walker = this.#walker
 
-		const kind = el.type === 'Character' ? `${el.raw.startsWith('\\') ? 'Escaped' : ''}Character` as const : el.type
+		const kind = el.type === 'Character'
+			? `${el.raw.startsWith('\\') ? 'Escaped' : ''}Character` as const
+			: el.type === 'Assertion' && el.raw.startsWith('(')
+			? 'Lookaround'
+			: el.type
 
 		const range = new Range()
 		highlights.push([kind, range])
@@ -115,11 +120,29 @@ export class RegexSyntaxHighlights {
 				this.#handleElement(el.pattern)
 				break
 			}
+			case 'Assertion': {
+				switch (el.kind) {
+					case 'lookahead':
+					case 'lookbehind': {
+						for (const child of el.alternatives) this.#handleElement(child)
+						break
+					}
+					case 'end':
+					case 'start':
+					case 'word': {
+						break
+					}
+					default: {
+						// @ts-expect-error type should be never
+						el.kind
+					}
+				}
+				break
+			}
 			case 'Modifiers':
 			case 'Flags':
 			case 'ModifierFlags':
 			case 'Character':
-			case 'Assertion':
 			case 'Backreference':
 			case 'CharacterSet': {
 				break

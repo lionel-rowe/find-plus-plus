@@ -36,8 +36,8 @@ async function saveOptions() {
 	const flags = getFlags(elements.form)
 
 	await optionsStorage.set({
-		maxTimeout: clamp(elements.maxTimeout.valueAsNumber | 0, 1, Infinity),
-		maxMatches: clamp(elements.maxMatches.valueAsNumber | 0, 1, Infinity),
+		maxTimeout: Math.max(elements.maxTimeout.valueAsNumber | 0, 100),
+		maxMatches: Math.max(elements.maxMatches.valueAsNumber | 0, 100),
 
 		'defaults.useRegex': flags.regexSyntax,
 		'defaults.matchCase': flags.matchCase,
