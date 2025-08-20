@@ -4,7 +4,7 @@ const SCROLLABLE_OVERFLOW = new Set(['auto', 'scroll'])
 const SCROLLABLE_OVERFLOW_INCLUDING_HIDDEN = new Set([...SCROLLABLE_OVERFLOW, 'hidden'])
 
 /** @returns The element's scroll parent, or `null` if the scroll parent is the document root. */
-export function getScrollParent(element: HTMLElement, options: { includeHidden?: boolean } = {}): HTMLElement | null {
+export function getScrollParent(element: Element, options: { includeHidden?: boolean } = {}): Element | null {
 	const includeHidden = options.includeHidden ?? false
 	const { position } = getComputedStyle(element)
 
@@ -13,7 +13,7 @@ export function getScrollParent(element: HTMLElement, options: { includeHidden?:
 	const excludeStaticParent = position === 'absolute'
 	const scrollableOverflowStyles = includeHidden ? SCROLLABLE_OVERFLOW_INCLUDING_HIDDEN : SCROLLABLE_OVERFLOW
 
-	let parent: HTMLElement | null = element
+	let parent: Element | null = element
 	while ((parent = parent.parentElement)) {
 		const { overflow, position } = getComputedStyle(parent)
 		if (excludeStaticParent && position === 'static') continue
@@ -21,4 +21,8 @@ export function getScrollParent(element: HTMLElement, options: { includeHidden?:
 	}
 
 	return null
+}
+
+export function getElementAncestor(node: Node) {
+	return node instanceof Element ? node : node.parentElement ?? document.documentElement
 }

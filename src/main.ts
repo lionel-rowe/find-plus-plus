@@ -11,7 +11,8 @@ import type { AppOptions, Command } from './types.ts'
 import { type FlagName, getFlags, setFlagDefaults, updateShortkeyHints } from './flagForm.ts'
 import { RegexSyntaxHighlights, regexSyntaxHighlightTypes } from './syntaxHighlighting.ts'
 import { trimBy } from '@std/text/unstable-trim-by'
-import { getScrollParent } from './scrollParent.ts'
+import { scrollIntoView } from './scrollToRange.ts'
+import { getElementAncestor } from './scrollParent.ts'
 
 let options = defaultOptions
 
@@ -76,14 +77,9 @@ function getRanges(element: HTMLElement, regex: RegExp) {
 }
 
 function filter(range: Range, text: string) {
-	const element = getElementAncestor(range)
+	const element = getElementAncestor(range.commonAncestorContainer)
 	if (!/\S/.test(text)) return false
 	return !element.matches('script, style') && element.checkVisibility()
-}
-
-function getElementAncestor(range: Range) {
-	const container = range.commonAncestorContainer
-	return container instanceof HTMLElement ? container : container.parentElement ?? document.documentElement
 }
 
 let ranges: Range[] = []
@@ -173,33 +169,9 @@ function setRangeIndex(value: IndexSetter) {
 
 	CSS.highlights.set(HIGHLIGHT_CURRENT_ID, new Highlight(range))
 
-	scrollToRange(range)
+	scrollIntoView(range)
 
 	elements.infoMessage.textContent = `${rangeIndex + 1} of ${ranges.length}`
-}
-
-function scrollToRange(range: Range, behavior: ScrollBehavior = 'instant') {
-	// Make sure the parent element is in view (including child scroll containers).
-	// `scrollIntoView` is an order of magnitude slower than `scrollTo`, so we avoid calling
-	// it if the scroll parent is the document root
-	const element = getElementAncestor(range)
-	const scrollParent = getScrollParent(element)
-	if (scrollParent != null) {
-		element.scrollIntoView({ behavior, block: 'nearest', inline: 'nearest' })
-	}
-
-	// target the range's bounding box more acurately
-	const rect = range.getBoundingClientRect()
-
-	const totalHeight = document.documentElement.clientHeight
-	const totalWidth = document.documentElement.clientWidth
-
-	const options = {
-		behavior,
-		top: rect.top + window.scrollY - totalHeight / 2 - rect.height / 2,
-		left: rect.left + window.scrollY - totalWidth / 2 - rect.width / 2,
-	}
-	document.documentElement.scrollTo(options)
 }
 
 const updateSearch = throttle(_updateSearch, (n) => n, { ensureLast: true })
@@ -241,9 +213,6 @@ export function toggleFlag(name: FlagName) {
 }
 
 function _updateSearch() {
-	for (const h of regexSyntaxHighlightTypes) {
-		CSS.highlights.delete(h)
-	}
 	for (const name of regexSyntaxHighlightTypes) {
 		CSS.highlights.get(namespaced(name))!.clear()
 	}
@@ -274,7 +243,6 @@ function _updateSearch() {
 
 	if (isRegex) {
 		const highlights = new RegexSyntaxHighlights(elements.textarea, regex, result.kind === 'full')
-
 		for (const [name, range] of highlights.result) {
 			CSS.highlights.get(namespaced(name))!.add(range)
 		}
