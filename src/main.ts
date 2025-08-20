@@ -244,6 +244,9 @@ function _updateSearch() {
 	for (const h of regexSyntaxHighlightTypes) {
 		CSS.highlights.delete(h)
 	}
+	for (const name of regexSyntaxHighlightTypes) {
+		CSS.highlights.get(namespaced(name))!.clear()
+	}
 
 	const source = elements.textarea.value
 	const result = searchTermToRegexResult(source, getFlags(elements.flags))
@@ -269,14 +272,12 @@ function _updateSearch() {
 		return
 	}
 
-	const highlights = new RegexSyntaxHighlights(elements.textarea, regex, result.kind === 'full')
+	if (isRegex) {
+		const highlights = new RegexSyntaxHighlights(elements.textarea, regex, result.kind === 'full')
 
-	for (const name of regexSyntaxHighlightTypes) {
-		CSS.highlights.get(namespaced(name))!.clear()
-	}
-
-	for (const [name, range] of highlights.result) {
-		CSS.highlights.get(namespaced(name))!.add(range)
+		for (const [name, range] of highlights.result) {
+			CSS.highlights.get(namespaced(name))!.add(range)
+		}
 	}
 
 	ranges = getRanges(document.body, regex)

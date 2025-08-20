@@ -9,10 +9,47 @@ export type Flags = {
 const REGEX_REGEX = /^\s*\/(?<source>.+)\/(?<flags>[dgimsuvy]*)\s*$/su
 const EMPTY_REGEX_SOURCE = new RegExp('').source
 
-const wordChar = String.raw`[\p{L}\p{M}\p{N}]`
-// TODO: better regex for these? e.g. should "{" surrounded by space be counted as a word?
-const startOfWord = `(?:(?<!${wordChar})(?=${wordChar}))`
-const endOfWord = `(?:(?<=${wordChar})(?!${wordChar}))`
+type WordDelimiters = {
+	wordChar: string
+	nonSpace: string
+}
+
+const wordDelimiterCache = new Map<string, WordDelimiters>()
+function wordBoundaryForMode(mode: 'v' | 'u' | ''): string {
+	const cached = wordDelimiterCache.get(mode)
+	if (cached) return getWordBoundary(cached)
+
+	const wordDelimiters: WordDelimiters = mode === ''
+		? {
+			wordChar: String.raw`\w`,
+			nonSpace: String.raw`\S`,
+		}
+		: {
+			wordChar: String.raw`[\p{L}\p{M}\p{N}]`,
+			nonSpace: String.raw`\P{space}`,
+		}
+
+	wordDelimiterCache.set(mode, wordDelimiters)
+	return getWordBoundary(wordDelimiters)
+}
+
+function firstOfKind(source: string) {
+	return `(?<!${source})(?=${source})`
+}
+function lastOfKind(source: string) {
+	return `(?<=${source})(?!${source})`
+}
+function anyOf(sources: string[], convert?: (source: string) => string) {
+	convert ??= (source) => source
+	return `(?:${sources.map(convert).join('|')})`
+}
+function getWordBoundary({ wordChar, nonSpace }: WordDelimiters) {
+	const alternates = [wordChar, nonSpace]
+	return anyOf([
+		anyOf(alternates, firstOfKind),
+		anyOf(alternates, lastOfKind),
+	])
+}
 
 type RegexSourceOnlyResult = {
 	kind: 'sourceOnly'
@@ -73,7 +110,7 @@ function getRegexOrThrow(source: string, flagValues: Flags) {
 		source = RegExp.escape(source)
 	}
 
-	for (const unicodeModeFlag of ['v', 'u', '']) {
+	for (const unicodeModeFlag of ['v', 'u', ''] as const) {
 		try {
 			// gives a more concise error message in case of regex syntax error
 			new RegExp(source, unicodeModeFlag)
@@ -83,7 +120,10 @@ function getRegexOrThrow(source: string, flagValues: Flags) {
 			continue
 		}
 
-		if (flagValues.wholeWord) source = `${startOfWord}${source}${endOfWord}`
+		if (flagValues.wholeWord) {
+			const wordBoundary = wordBoundaryForMode(unicodeModeFlag)
+			source = `${wordBoundary}${source}${wordBoundary}`
+		}
 		const flags = combineFlags(unicodeModeFlag, flagValues.matchCase ? '' : 'i', 'gm')
 
 		return new RegExp(source, flags)
