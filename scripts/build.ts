@@ -18,39 +18,42 @@ const OUT_DIR = 'dist'
 
 const DEBOUNCE_MS = 200
 
-const MAIN_WORLD_ENTRY_POINTS = ['main.ts']
-const ISOLATED_WORLD_ENTRY_POINTS = ['content.ts', 'background.ts', 'options.ts']
-const ENTRY_POINTS = [...MAIN_WORLD_ENTRY_POINTS, ...ISOLATED_WORLD_ENTRY_POINTS]
+const entryPoints: { fileName: string; world?: 'main' | 'isolated'; esm?: boolean }[] = [
+	{ fileName: 'main.ts', world: 'main' },
+	{ fileName: 'content.ts' },
+	{ fileName: 'background.ts' },
+	{ fileName: 'options.ts', esm: true },
+]
 
 const IS_PROD = Boolean(Deno.env.get('PROD'))
 
 const buildJs = debounce(async () => {
 	const infos: { outPath: string; size: number }[] = []
-	for (const entry of ENTRY_POINTS) {
-		const isEsm = MAIN_WORLD_ENTRY_POINTS.includes(entry)
-		const path = join(IN_DIR, entry)
+	for (const { fileName, world = 'isolated', esm } of entryPoints) {
+		const path = join(IN_DIR, fileName)
 		// assert exists
 		await Deno.stat(path)
 
 		const args = ['bundle']
-		if (IS_PROD) args.push('--minify')
 		args.push('--platform', 'browser')
+		if (!esm) args.push('--format', 'iife')
+		if (IS_PROD) args.push('--minify')
 
 		// // TODO: maybe add?
 		// args.push('--code-splitting')
-		// // not currently usable due to 'Top-level await is currently not supported with the "iife" output format'
-		// // https://github.com/denoland/deno/issues/30431
-		// if (!isEsm) args.push('--format', 'iife')
 
 		args.push(path)
 
-		const outPath = join(OUT_DIR, entry.replace(/\.ts$/, '.js'))
+		const outPath = join(OUT_DIR, fileName.replace(/\.ts$/, '.js'))
 
 		const { stdout } = await new Deno.Command(Deno.execPath(), { args, stdout: 'piped' }).spawn().output()
 
-		const wrap: [string, string] = isEsm ? ['', ''] : ['void (async () => {\n', '})()\n']
+		const wrap: [string, string] = esm ? ['', ''] : ['{\n', '}\n']
 
-		const id = isEsm ? 'new URL(import.meta.url).hostname' : 'chrome.runtime.id'
+		const id = world === 'main'
+			? `new URL(${esm ? 'import.meta.url' : 'document.currentScript.src'}).hostname`
+			: 'chrome.runtime.id'
+
 		const bytes = stdout.length
 			? concatAsBytes`${wrap[0]}const APP_ID = ${JSON.stringify(_prefix)} + ${id};\n${stdout}${wrap[1]}`
 			: stdout

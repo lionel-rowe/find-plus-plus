@@ -41,12 +41,13 @@ async function initialize(root: Element, html: string) {
 	root.append(el)
 
 	const script = document.createElement('script')
-	script.type = 'module'
+	// script.type = 'module'
 	script.src = chrome.runtime.getURL('/main.js')
 	root.append(script)
 
 	await new Promise((res) => document.addEventListener(NotifyReadyEvent.TYPE, res, { once: true }))
 
 	const options = await optionsStorage.get(defaultOptions)
+	// TODO: update options every time they're changed, not just on init
 	document.dispatchEvent(new UpdateOptionsEvent({ options }))
 }

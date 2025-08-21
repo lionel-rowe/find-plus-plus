@@ -266,7 +266,7 @@ function onPaste(dt: DataTransfer | null): boolean {
 	return false
 }
 
-export function toggleFlag(name: FlagName) {
+function toggleFlag(name: FlagName) {
 	const el = elements.flags.querySelector(`[name="${name}"]`)
 	assert(el instanceof HTMLInputElement && el.type === 'checkbox')
 
@@ -301,14 +301,18 @@ async function _updateSearch() {
 
 	elements.flags.hidden = kind === 'full'
 
-	if (isRegex) {
-		const highlights = new RegexSyntaxHighlights(
-			elements.textarea,
-			regex ?? { unicodeSets: true },
-			result.kind === 'full',
-		)
-		for (const [name, range] of highlights.result) {
-			CSS.highlights.get(namespaced(name))!.add(range)
+	if (isRegex && elements.textarea.textContent) {
+		try {
+			const highlights = new RegexSyntaxHighlights(
+				elements.textarea,
+				regex ?? { unicodeSets: true },
+				result.kind === 'full',
+			)
+			for (const [name, range] of highlights.result) {
+				CSS.highlights.get(namespaced(name))!.add(range)
+			}
+		} catch (e) {
+			console.error(e, elements.textarea.textContent, regex ?? { unicodeSets: true }, result.kind)
 		}
 	}
 

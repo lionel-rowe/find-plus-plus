@@ -2,7 +2,6 @@ import { defaultOptions, TEMPLATE_ID } from './config.ts'
 import { getFlags, setFlagDefaults, updateShortkeyHints } from './flagForm.ts'
 import { getHtml } from './populateTemplate.ts'
 import { optionsStorage } from './storage.ts'
-import { clamp } from './utils.ts'
 
 const html = await getHtml()
 
