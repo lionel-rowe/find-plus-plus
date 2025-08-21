@@ -23,6 +23,7 @@ const entryPoints: { fileName: string; world?: 'main' | 'isolated'; esm?: boolea
 	{ fileName: 'content.ts' },
 	{ fileName: 'background.ts' },
 	{ fileName: 'options.ts', esm: true },
+	{ fileName: 'workerRunner.ts', esm: true },
 ]
 
 const IS_PROD = Boolean(Deno.env.get('PROD'))
@@ -55,7 +56,7 @@ const buildJs = debounce(async () => {
 			: 'chrome.runtime.id'
 
 		const bytes = stdout.length
-			? concatAsBytes`${wrap[0]}const APP_ID = ${JSON.stringify(_prefix)} + ${id};\n${stdout}${wrap[1]}`
+			? concatAsBytes`${wrap[0]}const APP_NS = ${JSON.stringify(_prefix)} + ${id};\n${stdout}${wrap[1]}`
 			: stdout
 
 		await Deno.writeTextFile(outPath, decoder.decode(bytes))

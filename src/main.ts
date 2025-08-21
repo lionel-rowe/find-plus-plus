@@ -6,7 +6,7 @@ import {
 	HIGHLIGHT_ALL_ID,
 	HIGHLIGHT_CURRENT_ID,
 	HIGHLIGHT_TEXT_ID,
-	namespaced,
+	namespacedIds,
 } from './config.ts'
 import { modulo } from './utils.ts'
 import { assert } from '@std/assert/assert'
@@ -22,7 +22,7 @@ import { trimBy } from '@std/text/unstable-trim-by'
 import { scrollIntoView } from './scrollToRange.ts'
 import { getElementAncestor } from './scrollParent.ts'
 import type { GetMatchesRequestData } from './worker.ts'
-import { GetMatchesResponseData, workerFn } from './worker.ts'
+import { GetMatchesResponseData } from './worker.ts'
 
 let options = defaultOptions
 
@@ -53,27 +53,47 @@ function setColors(options: AppOptions) {
 
 document.addEventListener(CloseEvent.TYPE, close)
 
-document.dispatchEvent(new NotifyReadyEvent())
+document.dispatchEvent(new NotifyReadyEvent({ source: 'main' }))
 
 let isOpen = false
 
-const workerUrl = URL.createObjectURL(
-	new Blob([`(${workerFn.toString()})(${JSON.stringify({ GET_MATCHES_REQUEST, GET_MATCHES_RESPONSE })})`], {
-		type: 'application/javascript',
-	}),
-)
+window.addEventListener('message', console.warn)
 
-function getWorker() {
-	return new Worker(workerUrl, { type: 'module' })
+type WorkerWrapper = Pick<globalThis.Worker, 'addEventListener' | 'postMessage' | 'terminate'>
+
+getWorkerWrapper()
+
+function getWorkerWrapper() {
+	const { contentWindow, src } = elements.workerRunner
+	assert(contentWindow != null)
+
+	const worker: WorkerWrapper = {
+		terminate() {
+			contentWindow.postMessage({ kind: 'terminate' }, src)
+		},
+		addEventListener<K extends keyof WorkerEventMap>(
+			type: K,
+			listener: (ev: WorkerEventMap[K]) => unknown,
+			options?: boolean | AddEventListenerOptions,
+		) {
+			globalThis.addEventListener(type, listener, options)
+		},
+		postMessage(message, transfer) {
+			assert(transfer == null) // add support later if needed
+			contentWindow.postMessage(message, src)
+		},
+	}
+
+	return worker
 }
 
-let worker: Worker | null = null
+let workerWrapper: WorkerWrapper | null = null
 let ac: AbortController | null = null
 
 async function* getMatches({ source, flags, text }: Pick<GetMatchesRequestData, 'source' | 'flags' | 'text'>) {
-	worker?.terminate()
+	workerWrapper?.terminate()
 	ac?.abort()
-	const w = worker = getWorker()
+	const w = workerWrapper = getWorkerWrapper()
 	ac = new AbortController()
 
 	const PAGE_SIZE = 500
@@ -95,8 +115,7 @@ async function* getMatches({ source, flags, text }: Pick<GetMatchesRequestData, 
 			Promise.race([
 				new Promise<GetMatchesResponseData>((res) =>
 					w.addEventListener('message', (e) => {
-						assert(e.data.kind === GET_MATCHES_RESPONSE)
-						res(e.data)
+						if (e.data.kind === GET_MATCHES_RESPONSE) res(e.data)
 					}, { once: true, signal })
 				),
 				new Promise<never>((_, rej) => {
@@ -279,7 +298,7 @@ function toggleFlag(name: FlagName) {
 
 async function _updateSearch() {
 	for (const name of regexSyntaxHighlightTypes) {
-		CSS.highlights.get(namespaced(name))!.clear()
+		CSS.highlights.get(namespacedIds.get(name))!.clear()
 	}
 
 	const source = elements.textarea.value
@@ -309,7 +328,7 @@ async function _updateSearch() {
 				result.kind === 'full',
 			)
 			for (const [name, range] of highlights.result) {
-				CSS.highlights.get(namespaced(name))!.add(range)
+				CSS.highlights.get(namespacedIds.get(name))!.add(range)
 			}
 		} catch (e) {
 			console.error(e, elements.textarea.textContent, regex ?? { unicodeSets: true }, result.kind)

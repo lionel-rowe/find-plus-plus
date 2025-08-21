@@ -35,7 +35,14 @@
 	],
 	"web_accessible_resources": [
 		{
-			"resources": ["/main.js", "/template.html", "/common.css", "/search-box.css"],
+			"resources": [
+				"/main.js",
+				"/template.html",
+				"/common.css",
+				"/search-box.css",
+				"/worker-runner.html",
+				"/workerRunner.js"
+			],
 			"matches": ["<all_urls>"]
 		}
 	],

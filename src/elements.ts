@@ -1,4 +1,4 @@
-import { CUSTOM_ELEMENT_NAME } from './config.ts'
+import { CUSTOM_ELEMENT_NAME, WORKER_RUNNER_ID } from './config.ts'
 import { assert } from '@std/assert/assert'
 
 export function getElements() {
@@ -27,7 +27,10 @@ export function getElements() {
 	const flags = document.querySelector('.flags')
 	assert(flags instanceof HTMLFormElement)
 
-	return { container, textarea, info, infoMessage, flags }
+	const workerRunner = window.document.getElementById(WORKER_RUNNER_ID)
+	assert(workerRunner instanceof HTMLIFrameElement)
+
+	return { container, workerRunner, textarea, info, infoMessage, flags }
 }
 
 export const elements = getElements()

@@ -48,9 +48,7 @@ async function saveOptions() {
 	})
 
 	elements.status.textContent = 'Options saved!'
-	setTimeout(() => {
-		elements.status.textContent = ''
-	}, 2000)
+	setTimeout(() => elements.status.textContent = '', 3000)
 }
 
 async function restoreOptions() {

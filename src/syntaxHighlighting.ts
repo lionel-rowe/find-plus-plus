@@ -49,8 +49,9 @@ let priority = 0
 for (const name of regexSyntaxHighlightTypes) {
 	const hl = new Highlight()
 	hl.priority = priority++
-	CSS.highlights.set(namespaced(name), hl)
-	sheet.insertRule(`::highlight(${namespaced(name)}) { color: var(--syntax-${name}); }`)
+	const ns = namespaced(name)
+	CSS.highlights.set(ns, hl)
+	sheet.insertRule(`::highlight(${ns}) { color: var(--syntax-${name}); }`)
 }
 
 // keep types in sync

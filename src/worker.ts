@@ -1,5 +1,7 @@
+import type { GET_MATCHES_REQUEST, GET_MATCHES_RESPONSE, WORKER_READY } from './config.ts'
+
 export type GetMatchesRequestData = {
-	kind: string
+	kind: typeof GET_MATCHES_REQUEST
 	source: string
 	flags: string
 	text: string
@@ -8,20 +10,27 @@ export type GetMatchesRequestData = {
 }
 
 export type GetMatchesResponseData = {
-	kind: string
+	kind: typeof GET_MATCHES_RESPONSE
 	results: {
 		index: number
 		arr: [string, ...string[]]
-		groups: Record<string, string> | null
-		indices: [number, number][] | null
+		groups: Record<string, string> | null | undefined
+		indices: [number, number][] | null | undefined
 	}[]
+}
+export type WorkerMessageIds = {
+	WORKER_READY: typeof WORKER_READY
+	GET_MATCHES_REQUEST: typeof GET_MATCHES_REQUEST
+	GET_MATCHES_RESPONSE: typeof GET_MATCHES_RESPONSE
 }
 
 // invariant: no dependencies, nothing defined outside this function
-export function workerFn(ids: { GET_MATCHES_REQUEST: string; GET_MATCHES_RESPONSE: string }) {
+export function workerFn(ids: WorkerMessageIds) {
 	let regex = /^\b$/g // never matches
 	const matches: RegExpExecArray[] = []
 	let matchIter: Iterator<RegExpExecArray> = [][Symbol.iterator]()
+
+	globalThis.postMessage({ kind: ids.WORKER_READY })
 
 	globalThis.addEventListener('message', (e) => {
 		switch (e.data.kind) {
@@ -40,16 +49,18 @@ export function workerFn(ids: { GET_MATCHES_REQUEST: string; GET_MATCHES_RESPONS
 					if (next.done) break
 					matches.push(next.value)
 				}
-				globalThis.postMessage({
+				const response: GetMatchesResponseData = {
 					kind: ids.GET_MATCHES_RESPONSE,
 					results: matches.slice(start, end)
 						.map((x) => ({
 							index: x.index,
-							arr: x,
+							arr: [...x] as [string, ...string[]],
 							groups: x.groups,
 							indices: x.indices,
 						})),
-				})
+				}
+
+				globalThis.postMessage(response)
 			}
 		}
 	})
