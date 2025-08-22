@@ -2,6 +2,7 @@ import { defaultOptions, TEMPLATE_ID } from './config.ts'
 import { getFlags, setFlagDefaults, updateShortkeyHints } from './flagForm.ts'
 import { getHtml } from './populateTemplate.ts'
 import { optionsStorage } from './storage.ts'
+import { roundTo } from './utils.ts'
 
 const html = await getHtml()
 
@@ -35,7 +36,7 @@ async function saveOptions() {
 	const flags = getFlags(elements.form)
 
 	await optionsStorage.set({
-		maxTimeout: Math.max(elements.maxTimeout.valueAsNumber | 0, 100),
+		maxTimeout: Math.max((elements.maxTimeout.valueAsNumber * 1000) | 0, 100),
 		maxMatches: Math.max(elements.maxMatches.valueAsNumber | 0, 100),
 
 		'defaults.useRegex': flags.regexSyntax,
@@ -54,7 +55,7 @@ async function saveOptions() {
 async function restoreOptions() {
 	const options = await optionsStorage.get(defaultOptions)
 	setFlagDefaults(elements.form, options)
-	elements.maxTimeout.valueAsNumber = options.maxTimeout
+	elements.maxTimeout.valueAsNumber = roundTo(options.maxTimeout / 1000, 1)
 	elements.maxMatches.valueAsNumber = options.maxMatches
 
 	elements.colors.all.value = options['colors.all']

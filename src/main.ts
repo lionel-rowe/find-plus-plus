@@ -23,6 +23,7 @@ import { scrollIntoView } from './scrollToRange.ts'
 import { getElementAncestor } from './scrollParent.ts'
 import type { GetMatchesRequestData } from './worker.ts'
 import { GetMatchesResponseData } from './worker.ts'
+import { isDomException } from '@li/is-dom-exception'
 
 let options = defaultOptions
 
@@ -131,7 +132,7 @@ async function* getMatches({ source, flags, text }: Pick<GetMatchesRequestData, 
 				),
 				new Promise<never>((_, rej) => {
 					workerWrapper.addEventListener('error', rej, { once: true, signal })
-					signal.addEventListener('abort', rej)
+					signal.addEventListener('abort', () => rej(signal.reason))
 				}),
 			]),
 			workerWrapper.postMessage(message),
@@ -165,7 +166,9 @@ async function getRanges(element: HTMLElement, regex: RegExp) {
 			}
 		}
 	} catch (e) {
-		console.error(e)
+		if (isDomException(e, 'AbortError')) return []
+		if (isDomException(e, 'TimeoutError')) throw new Error('Timed out')
+		throw e
 	}
 
 	return ranges
@@ -357,11 +360,19 @@ async function _updateSearch() {
 	// to avoid unnecessary flicker
 	const loadingTimeout = setTimeout(() => {
 		elements.info.classList.add('loading')
-		CSS.highlights.delete(HIGHLIGHT_CURRENT_ID)
-		CSS.highlights.delete(HIGHLIGHT_ALL_ID)
+		removeAllHighlights()
 	}, SHOW_SPINNER_TIMEOUT_MS)
 	rangesPromise.then(() => clearTimeout(loadingTimeout))
-	ranges = await rangesPromise
+	try {
+		ranges = await rangesPromise
+	} catch (e) {
+		removeAllHighlights()
+		elements.infoMessage.textContent = Error.isError(e) ? e.message : String(e)
+		elements.info.classList.remove('loading')
+		elements.info.classList.add('error')
+		return
+	}
+
 	elements.info.classList.remove('loading')
 	rangeIndex = 0
 
