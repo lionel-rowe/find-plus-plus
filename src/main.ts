@@ -87,15 +87,15 @@ function getWorkerWrapper() {
 
 	return workerWrapper
 }
+const workerWrapper = getWorkerWrapper()
 
-let workerWrapper: WorkerWrapper | null = null
+// let workerWrapper: WorkerWrapper | null = null
 let ac: AbortController | null = null
 let reqNo = 0
 
 async function* getMatches({ source, flags, text }: Pick<GetMatchesRequestData, 'source' | 'flags' | 'text'>) {
-	workerWrapper?.terminate()
+	workerWrapper.terminate()
 	ac?.abort()
-	const w = workerWrapper = getWorkerWrapper()
 	ac = new AbortController()
 
 	const PAGE_SIZE = 500
@@ -103,7 +103,7 @@ async function* getMatches({ source, flags, text }: Pick<GetMatchesRequestData, 
 	let i = 0
 
 	const signal = AbortSignal.any([ac.signal, AbortSignal.timeout(options.maxTimeout)])
-	signal.addEventListener('abort', () => w.terminate())
+	signal.addEventListener('abort', () => workerWrapper.terminate())
 
 	while (true) {
 		const message: GetMatchesRequestData = {
@@ -118,7 +118,7 @@ async function* getMatches({ source, flags, text }: Pick<GetMatchesRequestData, 
 		const [{ results }] = await Promise.all([
 			Promise.race([
 				new Promise<GetMatchesResponseData>((res, rej) =>
-					w.addEventListener('message', (e) => {
+					workerWrapper.addEventListener('message', (e) => {
 						if (e.data.kind === GET_MATCHES_RESPONSE) {
 							if (e.data.reqNo === currentReqNo) {
 								res(e.data)
@@ -130,11 +130,11 @@ async function* getMatches({ source, flags, text }: Pick<GetMatchesRequestData, 
 					}, { once: true, signal })
 				),
 				new Promise<never>((_, rej) => {
-					w.addEventListener('error', rej, { once: true, signal })
+					workerWrapper.addEventListener('error', rej, { once: true, signal })
 					signal.addEventListener('abort', rej)
 				}),
 			]),
-			w.postMessage(message),
+			workerWrapper.postMessage(message),
 		])
 
 		yield* results
@@ -269,6 +269,7 @@ function setRangeIndex(value: IndexSetter) {
 	elements.infoMessage.textContent = `${rangeIndex + 1} of ${ranges.length}`
 }
 
+const SHOW_SPINNER_TIMEOUT_MS = 200
 const updateSearch = throttle(_updateSearch, (n) => n, { ensureLast: true })
 
 elements.textarea.addEventListener('input', updateSearch)
@@ -351,7 +352,17 @@ async function _updateSearch() {
 		return
 	}
 
-	ranges = await getRanges(document.body, regex)
+	const rangesPromise = getRanges(document.body, regex)
+	// only remove existing highlight & show loading spinner if results not retrieved within `SHOW_SPINNER_TIMEOUT_MS`
+	// to avoid unnecessary flicker
+	const loadingTimeout = setTimeout(() => {
+		elements.info.classList.add('loading')
+		CSS.highlights.delete(HIGHLIGHT_CURRENT_ID)
+		CSS.highlights.delete(HIGHLIGHT_ALL_ID)
+	}, SHOW_SPINNER_TIMEOUT_MS)
+	rangesPromise.then(() => clearTimeout(loadingTimeout))
+	ranges = await rangesPromise
+	elements.info.classList.remove('loading')
 	rangeIndex = 0
 
 	CSS.highlights.set(HIGHLIGHT_ALL_ID, new Highlight(...ranges))

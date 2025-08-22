@@ -66,7 +66,8 @@
 	}
 
 	.info {
-		min-height: 1.3rem;
+		--height: 1.3rem;
+		min-height: var(--height);
 		display: flex;
 		justify-content: space-between;
 		gap: 1rem;
@@ -91,9 +92,26 @@
 			}
 		}
 
-		&:is(.empty, .error) {
+		&:is(.empty, .error, .loading) {
 			button {
 				display: none;
+			}
+		}
+
+		&.loading {
+			.spinner {
+				--size: calc(var(--height) * 0.7);
+				--thickness: 0.2;
+				--on-color: #fff;
+				--off-color: #fff5;
+				width: var(--size);
+				height: var(--size);
+				border: calc(var(--size) * var(--thickness)) solid var(--off-color);
+				border-top-color: var(--on-color);
+				display: inline-block;
+				border-radius: 50%;
+				animation: spin 1s linear infinite;
+				margin-top: 2px;
 			}
 		}
 	}
@@ -105,5 +123,11 @@
 	}
 	&.prose {
 		font-family: var(--prose-font);
+	}
+}
+
+@keyframes spin {
+	to {
+		transform: rotate(360deg);
 	}
 }
