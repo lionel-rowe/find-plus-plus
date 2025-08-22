@@ -1,10 +1,12 @@
 :root, :host {
+	box-sizing: border-box;
 	color-scheme: dark;
 
 	--border-color: #bbb;
 	--border-width: 1px;
 	--border-radius: 0.2rem;
 
+	/* https://stackoverflow.com/questions/38498539/what-is-the-default-style-of-the-blue-focus-outline-in-chrome */
 	--focus-outline: 5px auto -webkit-focus-ring-color;
 
 	--accent-color: #00cc6a;
@@ -17,7 +19,8 @@
 }
 
 .textarea {
-	padding: 0.3rem;
+	--padding: 0.3rem;
+	padding: var(--padding);
 	margin: 0.3rem 0;
 	border: var(--border-width) solid var(--border-color);
 	border-radius: var(--border-radius);
@@ -25,7 +28,7 @@
 	--code-font: monospace;
 	--prose-font: sans-serif;
 	font-size-adjust: cap-height 0.6;
-	line-height: 1rem;
+	line-height: 1;
 }
 
 .flags:not([hidden]) {

@@ -35,7 +35,7 @@ globalThis.addEventListener('message', (e) => {
 			if (source !== regex.source || flags !== regex.flags) {
 				regex = new RegExp(source, flags)
 				matches.length = 0
-				matchIter = String(text).matchAll(regex)[Symbol.iterator]()
+				matchIter = text.matchAll(regex)[Symbol.iterator]()
 			}
 
 			const end = start + num

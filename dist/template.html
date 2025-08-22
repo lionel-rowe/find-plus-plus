@@ -12,14 +12,25 @@
 <template id="__TEMPLATE_ID__">
 	<link rel="stylesheet" href="__SEARCH_BOX_STYLES_URL__">
 	<div class="search-box">
-		<label class="label">
-			Find++
-			<div class="textarea">
-				<span class="textarea-input" contenteditable="plaintext-only" spellcheck="false"></span>
-				<!-- TODO: add info icon "(?)" to attach `title` to -->
-				&zwnj; <!-- ensure min height -->
-			</div>
-		</label>
+		<div>
+			<button type="button" class="options-button" aria-label="Options" title="Options">⚙️</button>
+			<label class="label">
+				Find++
+				<!-- deno-fmt-ignore -->
+				<div class="textarea"><!--
+					--><span aria-hidden="true"><!--
+						maintain height if no content
+						-->&ZeroWidthSpace;<!--
+					--></span><!--
+					--><span
+						class="textarea-input"
+						contenteditable="plaintext-only"
+						spellcheck="false"
+					></span>
+					<!-- TODO: add info icon "(?)" to attach `title` to -->
+				</div>
+			</label>
+		</div>
 
 		<div class="info ok">
 			<span class="spinner" hidden></span>

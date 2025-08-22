@@ -23,7 +23,6 @@ function scrollToRange(range: Range, element: Element, behavior: ScrollBehavior 
 	// it if the scroll parent is the document root
 	if (scrollParent != null) {
 		element.scrollIntoView({ behavior, block: 'center', inline: 'center' })
-		// return
 	}
 
 	// target the range more accurately (`element` is typically larger surface area than `range`)
@@ -42,7 +41,7 @@ function scrollToRange(range: Range, element: Element, behavior: ScrollBehavior 
 
 function subtractPixelDelta(n: number) {
 	// TODO: Should this ideally be `Number.EPSILON`-based?
-	// Currently we just subtract 1 pixel, logic fails when using `Number.EPSILON`.
+	// Currently we just subtract 1 pixel; logic fails when using `Number.EPSILON`.
 	// return n * (1 - Number.EPSILON)
 	return n - 1
 }

@@ -102,12 +102,12 @@
 			.spinner {
 				--size: calc(var(--height) * 0.7);
 				--thickness: 0.2;
-				--on-color: #fff;
-				--off-color: #fff5;
+				--on: #fff;
+				--off: #fff5;
 				width: var(--size);
 				height: var(--size);
-				border: calc(var(--size) * var(--thickness)) solid var(--off-color);
-				border-top-color: var(--on-color);
+				border: calc(var(--size) * var(--thickness)) solid var(--off);
+				border-top-color: var(--on);
 				display: inline-block;
 				border-radius: 50%;
 				animation: spin 1s linear infinite;
@@ -143,5 +143,31 @@
 @keyframes spin {
 	to {
 		transform: rotate(360deg);
+	}
+}
+
+.options-button {
+	background: unset;
+	border: unset;
+	font-size: unset;
+	padding: unset;
+	cursor: pointer;
+	padding: 0;
+	opacity: 0.6;
+	position: absolute;
+	--margin: 0.7rem;
+	margin: var(--margin);
+	top: 0;
+	right: 0;
+	--size: 1.5rem;
+	width: var(--size);
+	height: var(--size);
+	display: flex;
+	align-items: center;
+	justify-content: center;
+	line-height: 1;
+
+	&:hover {
+		opacity: 1;
 	}
 }

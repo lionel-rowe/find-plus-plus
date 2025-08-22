@@ -12,19 +12,16 @@ const workerUrl = '/worker.js'
 async function getWorker() {
 	const worker = new Worker(workerUrl, { type: 'module' })
 
-	await new Promise<void>((res) => {
+	return await new Promise<Worker>((res) => {
 		worker.addEventListener('message', (e) => {
 			assert(e.data.kind === WORKER_READY)
-			res()
+			// forward all messages from worker
+			worker.addEventListener('message', (e) => {
+				globalThis.parent.postMessage(e.data, { targetOrigin })
+			})
+			res(worker)
 		}, { once: true })
 	})
-
-	// forward all messages from worker
-	worker.addEventListener('message', (e) => {
-		globalThis.parent.postMessage(e.data, { targetOrigin })
-	})
-
-	return worker
 }
 
 let worker: Worker
@@ -32,7 +29,7 @@ let workerPromise = getWorker()
 
 // forward all messages to worker
 globalThis.addEventListener('message', async (e) => {
-	if (e.data.kind === 'terminate') {
+	if (e.data.kind === 'restart') {
 		worker?.terminate()
 		workerPromise = getWorker()
 		return

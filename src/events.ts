@@ -26,6 +26,10 @@ export class UpdateOptionsEvent extends AppEvent<{ options: AppOptions }> {
 	static override readonly TYPE = namespaced('update-options')
 }
 
+export class OpenOptionsPageEvent extends AppEvent {
+	static override readonly TYPE = namespaced('open-options-page')
+}
+
 export class CommandEvent extends AppEvent<{ command: Command; shortkeys: ShortkeyConfig }> {
 	static override readonly TYPE = namespaced('command')
 }

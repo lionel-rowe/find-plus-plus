@@ -2,16 +2,7 @@ import { debounce } from '@std/async/debounce'
 import { extname, join } from '@std/path'
 import { format } from '@std/fmt/bytes'
 import { cyan, gray } from '@std/fmt/colors'
-import { concat } from '@std/bytes'
 import { _prefix } from '../src/_prefix.ts'
-
-const encoder = new TextEncoder()
-const decoder = new TextDecoder()
-
-function concatAsBytes(t: TemplateStringsArray, ...args: (Uint8Array | string)[]) {
-	const all = t.flatMap((str, i) => i === t.length - 1 ? str : [str, args[i]])
-	return concat(all.map((arg) => typeof arg === 'string' ? encoder.encode(arg) : arg))
-}
 
 const IN_DIR = 'src'
 const OUT_DIR = 'dist'
@@ -52,26 +43,33 @@ const buildJs = debounce(async () => {
 
 		const wrap: [string, string] = esm ? ['', ''] : ['{\n', '}\n']
 
-		const id = context === 'isolated'
-			? 'chrome.runtime.id'
-			: `new URL(${
-				esm ? 'import.meta.url' : context === 'worker' ? 'location.origin' : 'document.currentScript.src'
-			}).hostname`
+		const url = context === 'isolated'
+			? 'chrome.runtime.getURL("")'
+			: esm
+			? 'import.meta.url'
+			: context === 'worker'
+			? 'location.origin'
+			: 'document.currentScript.src'
 
-		const bytes = stdout.length
-			? concatAsBytes`${wrap[0]}const APP_NS = ${JSON.stringify(_prefix)} + ${id};\n${stdout}${wrap[1]}`
-			: stdout
+		const blob = new Blob(
+			stdout.length === 0 ? [] : [
+				wrap[0],
+				`const APP_BASE_URL = new URL("/", ${url});\n`,
+				`const APP_NS = ${JSON.stringify(_prefix)} + APP_BASE_URL.hostname;\n`,
+				stdout,
+				wrap[1],
+			],
+		)
 
-		await Deno.writeTextFile(outPath, decoder.decode(bytes))
+		await Deno.writeFile(outPath, blob.stream())
 
-		infos.push({ outPath, size: bytes.length })
+		infos.push({ outPath, size: blob.size })
 	}
 	const filePathLen = Math.max(...infos.map(({ outPath }) => outPath.length))
 
+	// deno-lint-ignore no-console
 	console.info(
-		infos
-			.map(({ outPath, size }) => `${cyan(outPath.padEnd(filePathLen))} ${gray(format(size))}`)
-			.join('\n'),
+		infos.map(({ outPath, size }) => `${cyan(outPath.padEnd(filePathLen))} ${gray(format(size))}`).join('\n'),
 	)
 }, DEBOUNCE_MS)
 

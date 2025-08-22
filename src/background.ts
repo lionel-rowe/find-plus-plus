@@ -22,3 +22,9 @@ chrome.commands.onCommand.addListener(async (_command, tab) => {
 
 	chrome.tabs.sendMessage(tab.id, message)
 })
+
+chrome.runtime.onMessage.addListener((request) => {
+	if (request === 'showOptions') {
+		chrome.runtime.openOptionsPage()
+	}
+})

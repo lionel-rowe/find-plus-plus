@@ -1,5 +1,5 @@
 import * as CONFIG from './config.ts'
-import { CloseEvent, CommandEvent, NotifyReadyEvent, UpdateOptionsEvent } from './events.ts'
+import { CloseEvent, CommandEvent, NotifyReadyEvent, OpenOptionsPageEvent, UpdateOptionsEvent } from './events.ts'
 import { optionsStorage } from './storage.ts'
 import type { Message } from './types.ts'
 import { getHtml } from './populateTemplate.ts'
@@ -82,3 +82,8 @@ async function initialize(root: Element, html: string) {
 	// TODO: update options every time they're changed, not just on init
 	document.dispatchEvent(new UpdateOptionsEvent({ options }))
 }
+
+document.addEventListener(OpenOptionsPageEvent.TYPE, (e) => {
+	assert(e instanceof OpenOptionsPageEvent)
+	chrome.runtime.sendMessage('showOptions')
+})

@@ -8,7 +8,7 @@
 	},
 	"imports": {
 		"@eslint-community/regexpp": "npm:@eslint-community/regexpp@^4.12.1",
-		"@li/is-dom-exception": "jsr:@li/is-dom-exception@^0.2.0",
+		"@li/is-dom-exception": "jsr:@li/is-dom-exception@^0.2.1",
 		"@std/assert": "jsr:@std/assert@^1.0.14",
 		"@std/async": "jsr:@std/async@^1.0.14",
 		"@std/bytes": "jsr:@std/bytes@^1.0.6",
@@ -43,7 +43,7 @@
 		"rules": {
 			"tags": ["recommended"],
 			"exclude": ["no-window", "no-window-prefix"],
-			"include": []
+			"include": ["no-console"]
 		}
 	},
 	"exclude": []

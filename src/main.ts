@@ -13,7 +13,7 @@ import { assert } from '@std/assert/assert'
 import { elements } from './elements.ts'
 import { TextNodeOffsetWalker } from './textNodeOffset.ts'
 import { throttle } from '@std/async/unstable-throttle'
-import { CloseEvent, CommandEvent, NotifyReadyEvent, UpdateOptionsEvent } from './events.ts'
+import { CloseEvent, CommandEvent, NotifyReadyEvent, OpenOptionsPageEvent, UpdateOptionsEvent } from './events.ts'
 import { searchTermToRegexResult } from './regex.ts'
 import type { AppOptions, Command } from './types.ts'
 import { type FlagName, getFlags, setFlagDefaults, updateShortkeyHints } from './flagForm.ts'
@@ -58,53 +58,22 @@ document.dispatchEvent(new NotifyReadyEvent({ source: 'main' }))
 
 let isOpen = false
 
-type WorkerWrapper = {
-	addEventListener<K extends keyof WorkerEventMap>(
-		type: K,
-		listener: (this: Worker, ev: WorkerEventMap[K]) => void,
-		options?: boolean | AddEventListenerOptions,
-	): void
-	postMessage(message: unknown): void
-	terminate(): void
-}
+let ac: AbortController | null = null
+let _reqNo = 0
 
-function getWorkerWrapper() {
+async function* getMatches({ source, flags, text }: Pick<GetMatchesRequestData, 'source' | 'flags' | 'text'>) {
 	const { contentWindow, src } = elements.workerRunner
 	assert(contentWindow != null)
 
-	const workerWrapper: WorkerWrapper = {
-		terminate() {
-			contentWindow.postMessage({ kind: 'terminate' }, src)
-		},
-		addEventListener(type, listener, options) {
-			// deno-lint-ignore no-explicit-any
-			globalThis.addEventListener(type, listener as any, options)
-		},
-		postMessage(message: unknown) {
-			// assert(transfer == null) // add support later if needed
-			contentWindow.postMessage(message, src)
-		},
-	}
-
-	return workerWrapper
-}
-const workerWrapper = getWorkerWrapper()
-
-// let workerWrapper: WorkerWrapper | null = null
-let ac: AbortController | null = null
-let reqNo = 0
-
-async function* getMatches({ source, flags, text }: Pick<GetMatchesRequestData, 'source' | 'flags' | 'text'>) {
-	workerWrapper.terminate()
+	const reqNo = ++_reqNo
 	ac?.abort()
 	ac = new AbortController()
+	contentWindow.postMessage({ kind: 'restart', reqNo }, src)
 
 	const PAGE_SIZE = 500
-	const currentReqNo = reqNo++
 	let i = 0
 
 	const signal = AbortSignal.any([ac.signal, AbortSignal.timeout(options.maxTimeout)])
-	signal.addEventListener('abort', () => workerWrapper.terminate())
 
 	while (true) {
 		const message: GetMatchesRequestData = {
@@ -112,30 +81,30 @@ async function* getMatches({ source, flags, text }: Pick<GetMatchesRequestData, 
 			source,
 			flags,
 			text,
-			start: (i++) * PAGE_SIZE,
+			start: i++ * PAGE_SIZE,
 			num: PAGE_SIZE,
-			reqNo: currentReqNo,
+			reqNo,
 		}
+
 		const [{ results }] = await Promise.all([
 			Promise.race([
-				new Promise<GetMatchesResponseData>((res, rej) =>
-					workerWrapper.addEventListener('message', (e) => {
-						if (e.data.kind === GET_MATCHES_RESPONSE) {
-							if (e.data.reqNo === currentReqNo) {
-								res(e.data)
-							} else {
-								// stale
-								rej()
-							}
+				new Promise<GetMatchesResponseData>((res) =>
+					globalThis.addEventListener('message', (e) => {
+						if (e.data.kind === GET_MATCHES_RESPONSE && e.data.reqNo === reqNo) {
+							res(e.data)
 						}
-					}, { once: true, signal })
+					}, { signal })
 				),
 				new Promise<never>((_, rej) => {
-					workerWrapper.addEventListener('error', rej, { once: true, signal })
+					globalThis.addEventListener(
+						'error',
+						(e) => rej(Error.isError(e.error) ? e.error : new Error(e.error)),
+						{ once: true, signal },
+					)
 					signal.addEventListener('abort', () => rej(signal.reason))
 				}),
 			]),
-			workerWrapper.postMessage(message),
+			contentWindow.postMessage(message, src),
 		])
 
 		yield* results
@@ -143,14 +112,17 @@ async function* getMatches({ source, flags, text }: Pick<GetMatchesRequestData, 
 	}
 }
 
-async function getRanges(element: HTMLElement, regex: RegExp) {
+async function getRangesOrError(
+	element: HTMLElement,
+	regex: RegExp,
+): Promise<Range[] | (DOMException & { name: 'AbortError' | 'TimeoutError' })> {
 	const text = element.textContent ?? ''
 
 	const ranges: Range[] = []
 
-	try {
-		const walker = new TextNodeOffsetWalker(element)
+	const walker = new TextNodeOffsetWalker(element)
 
+	try {
 		let i = 0
 		for await (const { index, arr: m } of getMatches({ text, source: regex.source, flags: regex.flags })) {
 			const start = walker.next(index)
@@ -166,8 +138,9 @@ async function getRanges(element: HTMLElement, regex: RegExp) {
 			}
 		}
 	} catch (e) {
-		if (isDomException(e, 'AbortError')) return []
-		if (isDomException(e, 'TimeoutError')) throw new Error('Timed out')
+		if (isDomException(e, 'AbortError', 'TimeoutError')) {
+			return e
+		}
 		throw e
 	}
 
@@ -191,9 +164,8 @@ const cssLoaded = Promise.all(
 	}),
 )
 
-elements.textareaOuter.addEventListener('click', (e) => {
-	elements.textarea.focus()
-})
+// delegate focus to input
+elements.textareaOuter.addEventListener('click', () => elements.textarea.focus())
 
 async function open(e: CommandEvent) {
 	updateShortkeyHints(elements.flags, e.detail.shortkeys, true)
@@ -348,17 +320,13 @@ async function _updateSearch() {
 	elements.flags.hidden = kind === 'full'
 
 	if (isRegex && elements.textarea.textContent) {
-		try {
-			const highlights = new RegexSyntaxHighlights(
-				elements.textarea,
-				regex ?? { unicodeSets: true },
-				result.kind === 'full',
-			)
-			for (const [name, range] of highlights.result) {
-				CSS.highlights.get(namespacedIds.get(name))!.add(range)
-			}
-		} catch (e) {
-			console.error(e, elements.textarea.textContent, regex ?? { unicodeSets: true }, result.kind)
+		const highlights = new RegexSyntaxHighlights(
+			elements.textarea,
+			regex ?? { unicodeSets: true },
+			result.kind === 'full',
+		)
+		for (const [name, range] of highlights.result) {
+			CSS.highlights.get(namespacedIds.get(name))!.add(range)
 		}
 	}
 
@@ -367,28 +335,29 @@ async function _updateSearch() {
 		return
 	}
 
-	const rangesPromise = getRanges(document.body, regex)
+	const rangesPromise = getRangesOrError(document.body, regex)
 	// only remove existing highlight & show loading spinner if results not retrieved within `SHOW_SPINNER_TIMEOUT_MS`
 	// to avoid unnecessary flicker
 	const loadingTimeout = setTimeout(() => {
 		removeAllHighlights()
 		setInfoDisplayState('loading')
 	}, SHOW_SPINNER_TIMEOUT_MS)
-	rangesPromise.then(() => clearTimeout(loadingTimeout))
-	try {
-		ranges = await rangesPromise
-	} catch (e) {
+	rangesPromise.then(() => clearTimeout(loadingTimeout)).catch(() => clearTimeout(loadingTimeout))
+	const r = await rangesPromise
+	if (Error.isError(r)) {
+		if (isDomException(r, 'AbortError')) return
 		removeAllHighlights()
-		elements.infoMessage.textContent = Error.isError(e) ? e.message : String(e)
+		elements.infoMessage.textContent = Error.isError(r) ? r.message : String(r)
 		setInfoDisplayState('error')
 		return
 	}
+
+	ranges = r
 
 	setInfoDisplayState(ranges.length ? 'ok' : 'empty')
 	rangeIndex = 0
 
 	CSS.highlights.set(HIGHLIGHT_ALL_ID, new Highlight(...ranges))
-
 	setRangeIndex(0)
 }
 
@@ -398,3 +367,7 @@ function removeAllHighlights() {
 	rangeIndex = 0
 	setRangeIndex(0)
 }
+
+elements.optionsButton.addEventListener('click', () => {
+	document.dispatchEvent(new OpenOptionsPageEvent())
+})

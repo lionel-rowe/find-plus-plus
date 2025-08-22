@@ -84,6 +84,8 @@ export class RegexSyntaxHighlights {
 		try {
 			this.#populateHighlights()
 		} catch (e) {
+			// syntax highlighting errors shouldn't prevent core logic from running
+			// deno-lint-ignore no-console
 			console.error(e)
 		}
 	}
