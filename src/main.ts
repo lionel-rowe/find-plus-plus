@@ -57,9 +57,15 @@ document.dispatchEvent(new NotifyReadyEvent({ source: 'main' }))
 
 let isOpen = false
 
-window.addEventListener('message', console.warn)
-
-type WorkerWrapper = Pick<Worker, 'addEventListener' | 'postMessage' | 'terminate'>
+type WorkerWrapper = {
+	addEventListener<K extends keyof WorkerEventMap>(
+		type: K,
+		listener: (this: Worker, ev: WorkerEventMap[K]) => void,
+		options?: boolean | AddEventListenerOptions,
+	): void
+	postMessage(message: unknown): void
+	terminate(): void
+}
 
 function getWorkerWrapper() {
 	const { contentWindow, src } = elements.workerRunner
@@ -69,15 +75,12 @@ function getWorkerWrapper() {
 		terminate() {
 			contentWindow.postMessage({ kind: 'terminate' }, src)
 		},
-		addEventListener<K extends keyof WorkerEventMap>(
-			type: K,
-			listener: (ev: WorkerEventMap[K]) => unknown,
-			options?: boolean | AddEventListenerOptions,
-		) {
-			globalThis.addEventListener(type, listener, options)
+		addEventListener(type, listener, options) {
+			// deno-lint-ignore no-explicit-any
+			globalThis.addEventListener(type, listener as any, options)
 		},
-		postMessage(message, transfer) {
-			assert(transfer == null) // add support later if needed
+		postMessage(message: unknown) {
+			// assert(transfer == null) // add support later if needed
 			contentWindow.postMessage(message, src)
 		},
 	}
@@ -87,6 +90,7 @@ function getWorkerWrapper() {
 
 let workerWrapper: WorkerWrapper | null = null
 let ac: AbortController | null = null
+let reqNo = 0
 
 async function* getMatches({ source, flags, text }: Pick<GetMatchesRequestData, 'source' | 'flags' | 'text'>) {
 	workerWrapper?.terminate()
@@ -95,6 +99,7 @@ async function* getMatches({ source, flags, text }: Pick<GetMatchesRequestData, 
 	ac = new AbortController()
 
 	const PAGE_SIZE = 500
+	const currentReqNo = reqNo++
 	let i = 0
 
 	const signal = AbortSignal.any([ac.signal, AbortSignal.timeout(options.maxTimeout)])
@@ -108,12 +113,20 @@ async function* getMatches({ source, flags, text }: Pick<GetMatchesRequestData, 
 			text,
 			start: (i++) * PAGE_SIZE,
 			num: PAGE_SIZE,
+			reqNo: currentReqNo,
 		}
 		const [{ results }] = await Promise.all([
 			Promise.race([
-				new Promise<GetMatchesResponseData>((res) =>
+				new Promise<GetMatchesResponseData>((res, rej) =>
 					w.addEventListener('message', (e) => {
-						if (e.data.kind === GET_MATCHES_RESPONSE) res(e.data)
+						if (e.data.kind === GET_MATCHES_RESPONSE) {
+							if (e.data.reqNo === currentReqNo) {
+								res(e.data)
+							} else {
+								// stale
+								rej()
+							}
+						}
 					}, { once: true, signal })
 				),
 				new Promise<never>((_, rej) => {

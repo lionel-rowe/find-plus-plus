@@ -7,6 +7,7 @@ export type GetMatchesRequestData = {
 	text: string
 	start: number
 	num: number
+	reqNo: number
 }
 
 export type GetMatchesResponseData = {
@@ -17,6 +18,7 @@ export type GetMatchesResponseData = {
 		groups: Record<string, string> | null | undefined
 		indices: [number, number][] | null | undefined
 	}[]
+	reqNo: number
 }
 
 let regex = /^\b$/g // never matches
@@ -28,7 +30,7 @@ globalThis.postMessage({ kind: WORKER_READY })
 globalThis.addEventListener('message', (e) => {
 	switch (e.data.kind) {
 		case GET_MATCHES_REQUEST: {
-			const { source, flags, text, start, num } = e.data as GetMatchesRequestData
+			const { source, flags, text, start, num, reqNo } = e.data as GetMatchesRequestData
 
 			if (source !== regex.source || flags !== regex.flags) {
 				regex = new RegExp(source, flags)
@@ -40,10 +42,16 @@ globalThis.addEventListener('message', (e) => {
 			while (matches.length < end) {
 				const next = matchIter.next()
 				if (next.done) break
+
+				// // for debugging
+				// const start = Date.now()
+				// while (Date.now() - start < 100) {/* simulate lag */}
+
 				matches.push(next.value)
 			}
 			const response: GetMatchesResponseData = {
 				kind: GET_MATCHES_RESPONSE,
+				reqNo,
 				results: matches.slice(start, end)
 					.map((x) => ({
 						index: x.index,
