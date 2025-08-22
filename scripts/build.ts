@@ -18,11 +18,12 @@ const OUT_DIR = 'dist'
 
 const DEBOUNCE_MS = 200
 
-const entryPoints: { fileName: string; world?: 'main' | 'isolated'; esm?: boolean }[] = [
-	{ fileName: 'main.ts', world: 'main' },
+const entryPoints: { fileName: string; context?: 'main' | 'isolated' | 'worker'; esm?: boolean }[] = [
+	{ fileName: 'main.ts', context: 'main' },
 	{ fileName: 'content.ts' },
 	{ fileName: 'background.ts' },
 	{ fileName: 'options.ts', esm: true },
+	{ fileName: 'worker.ts', esm: true, context: 'worker' },
 	{ fileName: 'workerRunner.ts', esm: true },
 ]
 
@@ -30,7 +31,7 @@ const IS_PROD = Boolean(Deno.env.get('PROD'))
 
 const buildJs = debounce(async () => {
 	const infos: { outPath: string; size: number }[] = []
-	for (const { fileName, world = 'isolated', esm } of entryPoints) {
+	for (const { fileName, context = 'isolated', esm } of entryPoints) {
 		const path = join(IN_DIR, fileName)
 		// assert exists
 		await Deno.stat(path)
@@ -51,9 +52,11 @@ const buildJs = debounce(async () => {
 
 		const wrap: [string, string] = esm ? ['', ''] : ['{\n', '}\n']
 
-		const id = world === 'main'
-			? `new URL(${esm ? 'import.meta.url' : 'document.currentScript.src'}).hostname`
-			: 'chrome.runtime.id'
+		const id = context === 'isolated'
+			? 'chrome.runtime.id'
+			: `new URL(${
+				esm ? 'import.meta.url' : context === 'worker' ? 'location.origin' : 'document.currentScript.src'
+			}).hostname`
 
 		const bytes = stdout.length
 			? concatAsBytes`${wrap[0]}const APP_NS = ${JSON.stringify(_prefix)} + ${id};\n${stdout}${wrap[1]}`

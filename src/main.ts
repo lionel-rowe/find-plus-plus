@@ -59,15 +59,13 @@ let isOpen = false
 
 window.addEventListener('message', console.warn)
 
-type WorkerWrapper = Pick<globalThis.Worker, 'addEventListener' | 'postMessage' | 'terminate'>
-
-getWorkerWrapper()
+type WorkerWrapper = Pick<Worker, 'addEventListener' | 'postMessage' | 'terminate'>
 
 function getWorkerWrapper() {
 	const { contentWindow, src } = elements.workerRunner
 	assert(contentWindow != null)
 
-	const worker: WorkerWrapper = {
+	const workerWrapper: WorkerWrapper = {
 		terminate() {
 			contentWindow.postMessage({ kind: 'terminate' }, src)
 		},
@@ -84,7 +82,7 @@ function getWorkerWrapper() {
 		},
 	}
 
-	return worker
+	return workerWrapper
 }
 
 let workerWrapper: WorkerWrapper | null = null
@@ -150,7 +148,7 @@ async function getRanges(element: HTMLElement, regex: RegExp) {
 
 			if (filter(range, m[0])) {
 				ranges.push(range)
-				if (++i === options.maxMatches) break /*  */
+				if (++i === options.maxMatches) break
 			}
 		}
 	} catch (e) {

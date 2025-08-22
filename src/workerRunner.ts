@@ -1,24 +1,13 @@
 import { assert } from '@std/assert/assert'
-import { GET_MATCHES_REQUEST, GET_MATCHES_RESPONSE, WORKER_READY } from './config.ts'
+import { WORKER_READY } from './config.ts'
 import { NotifyReadyEvent } from './events.ts'
-import { workerFn, type WorkerMessageIds } from './worker.ts'
 
 // TODO: scope to `globalThis.parent.origin` somehow if possible (not directly readable from this frame)
 const targetOrigin = '*'
 
 globalThis.parent.postMessage({ kind: NotifyReadyEvent.TYPE }, { targetOrigin })
 
-const workerMessageIds: WorkerMessageIds = {
-	WORKER_READY,
-	GET_MATCHES_REQUEST,
-	GET_MATCHES_RESPONSE,
-}
-
-const workerUrl = URL.createObjectURL(
-	new Blob([`(${workerFn.toString()})(${JSON.stringify(workerMessageIds)})`], {
-		type: 'application/javascript',
-	}),
-)
+const workerUrl = '/worker.js'
 
 async function getWorker() {
 	const worker = new Worker(workerUrl, { type: 'module' })
