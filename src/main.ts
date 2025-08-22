@@ -41,9 +41,10 @@ document.addEventListener(CommandEvent.TYPE, (e) => {
 
 document.addEventListener(UpdateOptionsEvent.TYPE, (e) => {
 	assert(e instanceof UpdateOptionsEvent)
+	// only on first load (i.e. if options still reference-equal to defaultOptions)
+	if (options === defaultOptions) setFlagDefaults(elements.flags, e.detail.options)
 	options = e.detail.options
-	setFlagDefaults(elements.flags, options)
-	setColors(options)
+	setColors(e.detail.options)
 })
 
 function setColors(options: AppOptions) {
@@ -58,22 +59,22 @@ document.dispatchEvent(new NotifyReadyEvent({ source: 'main' }))
 
 let isOpen = false
 
-let ac: AbortController | null = null
+let currentAc = new AbortController()
 let _reqNo = 0
 
 async function* getMatches({ source, flags, text }: Pick<GetMatchesRequestData, 'source' | 'flags' | 'text'>) {
+	const reqNo = ++_reqNo
+	currentAc.abort()
+	currentAc = new AbortController()
+
 	const { contentWindow, src } = elements.workerRunner
 	assert(contentWindow != null)
-
-	const reqNo = ++_reqNo
-	ac?.abort()
-	ac = new AbortController()
 	contentWindow.postMessage({ kind: 'restart', reqNo }, src)
 
 	const PAGE_SIZE = 500
 	let i = 0
 
-	const signal = AbortSignal.any([ac.signal, AbortSignal.timeout(options.maxTimeout)])
+	const signal = AbortSignal.any([currentAc.signal, AbortSignal.timeout(options.maxTimeout)])
 
 	while (true) {
 		const message: GetMatchesRequestData = {

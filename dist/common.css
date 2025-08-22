@@ -29,6 +29,7 @@
 	--prose-font: sans-serif;
 	font-size-adjust: cap-height 0.6;
 	line-height: 1;
+	font-size: 1rem;
 }
 
 .flags:not([hidden]) {

@@ -14,10 +14,17 @@ export type AppOptions = {
 }
 
 export type Command = keyof typeof import('../dist/manifest.json', { with: { type: 'json' }})['commands']
-export type Message = {
+
+type CommandMessage = {
+	kind: 'command'
 	command: Command
 	shortkeys: ShortkeyConfig
 }
+type OptionsUpdatedMessage = {
+	kind: 'optionsUpdated'
+}
+
+export type Message = CommandMessage | OptionsUpdatedMessage
 export type ShortkeyConfig = Record<Command, {
 	combo: string
 	description: string

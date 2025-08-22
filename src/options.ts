@@ -37,7 +37,7 @@ async function saveOptions() {
 
 	await optionsStorage.set({
 		maxTimeout: Math.max((elements.maxTimeout.valueAsNumber * 1000) | 0, 100),
-		maxMatches: Math.max(elements.maxMatches.valueAsNumber | 0, 100),
+		maxMatches: Math.max(elements.maxMatches.valueAsNumber | 0, 1),
 
 		'defaults.useRegex': flags.regexSyntax,
 		'defaults.matchCase': flags.matchCase,
@@ -71,9 +71,10 @@ async function restoreOptions() {
 
 restoreOptions()
 
-elements.form.addEventListener('submit', (e) => {
+elements.form.addEventListener('submit', async (e) => {
 	e.preventDefault()
-	saveOptions()
+	await saveOptions()
+	await chrome.runtime.sendMessage('optionsUpdated')
 })
 
 elements.form.addEventListener('reset', async (e) => {
@@ -81,6 +82,7 @@ elements.form.addEventListener('reset', async (e) => {
 
 	if (confirm('Are you sure you want to reset all options to the defaults?')) {
 		await optionsStorage.clear()
+		await chrome.runtime.sendMessage('optionsUpdated')
 		location.reload()
 	}
 })

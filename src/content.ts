@@ -15,23 +15,36 @@ const ready = Object.assign(Promise.withResolvers<void>(), { initialized: false,
 chrome.runtime.onMessage.addListener(handle)
 
 async function handle(message: Message) {
-	if (!ready.finalized && message.command !== 'open') return
+	if (!ready.finalized && (message.kind !== 'command' || message.command !== 'open')) return
 
-	if (!ready.initialized && message.command === 'open') {
-		// set true before awaiting anything to ensure `initialize` only run once
-		ready.initialized = true
+	switch (message.kind) {
+		case 'command': {
+			if (!ready.initialized && message.command === 'open') {
+				// set true before awaiting anything to ensure `initialize` only run once
+				ready.initialized = true
 
-		// On legacy sites, `document.body` can also be a `<frameset>` 😲
-		// https://stackoverflow.com/questions/35297274/why-is-document-body-not-a-htmlbodyelement
-		const [root, html] = await Promise.all([waitForElement('body, frameset'), getHtml()])
-		await initialize(root, html)
-		ready.resolve()
-		ready.finalized = true
+				// On legacy sites, `document.body` can also be a `<frameset>` 😲
+				// https://stackoverflow.com/questions/35297274/why-is-document-body-not-a-htmlbodyelement
+				const [root, html] = await Promise.all([waitForElement('body, frameset'), getHtml()])
+				await initialize(root, html)
+				ready.resolve()
+				ready.finalized = true
+			}
+
+			// await ready.promise
+
+			document.dispatchEvent(new CommandEvent(message))
+
+			break
+		}
+		case 'optionsUpdated': {
+			const options = await optionsStorage.get(defaultOptions)
+			// TODO: update options every time they're changed, not just on init
+			document.dispatchEvent(new UpdateOptionsEvent({ options }))
+
+			break
+		}
 	}
-
-	await ready.promise
-
-	document.dispatchEvent(new CommandEvent(message))
 }
 
 // plain `Escape` can't be handled by `chrome.commands` as commands must include Ctrl or Alt
@@ -79,7 +92,6 @@ async function initialize(root: Element, html: string) {
 	)
 
 	const options = await optionsStorage.get(defaultOptions)
-	// TODO: update options every time they're changed, not just on init
 	document.dispatchEvent(new UpdateOptionsEvent({ options }))
 }
 
