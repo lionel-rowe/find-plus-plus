@@ -191,6 +191,10 @@ const cssLoaded = Promise.all(
 	}),
 )
 
+elements.textareaOuter.addEventListener('click', (e) => {
+	elements.textarea.focus()
+})
+
 async function open(e: CommandEvent) {
 	updateShortkeyHints(elements.flags, e.detail.shortkeys, true)
 
@@ -337,7 +341,9 @@ async function _updateSearch() {
 		return
 	}
 
-	const { regex, kind } = result
+	const { regex, kind, empty } = result
+
+	elements.textarea.title = isRegex ? regex?.toString() ?? '' : ''
 
 	elements.flags.hidden = kind === 'full'
 
@@ -356,7 +362,7 @@ async function _updateSearch() {
 		}
 	}
 
-	if (regex == null) {
+	if (empty) {
 		removeAllHighlights()
 		return
 	}

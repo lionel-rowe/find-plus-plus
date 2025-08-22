@@ -122,11 +122,21 @@
 }
 
 .textarea {
-	&.code {
-		font-family: var(--code-font);
+	&:focus-within {
+		outline: var(--focus-outline);
+
+		.textarea-input:focus {
+			outline: none;
+		}
 	}
-	&.prose {
-		font-family: var(--prose-font);
+
+	.textarea-input {
+		&.code {
+			font-family: var(--code-font);
+		}
+		&.prose {
+			font-family: var(--prose-font);
+		}
 	}
 }
 

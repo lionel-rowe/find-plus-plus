@@ -54,12 +54,14 @@ function getWordBoundary({ wordChar, nonSpace }: WordDelimiters) {
 type RegexSourceOnlyResult = {
 	kind: 'sourceOnly'
 	usesRegexSyntax: boolean
-	regex: RegExp | null
+	regex: RegExp
+	empty: boolean
 }
 
 type RegexFullResult = {
 	kind: 'full'
-	regex: RegExp | null
+	regex: RegExp
+	empty: boolean
 }
 
 type RegexErrorResult = {
@@ -79,7 +81,8 @@ export function searchTermToRegexResult(searchTerm: string, flagValues: Flags): 
 			return {
 				kind: 'sourceOnly',
 				usesRegexSyntax: flagValues.regexSyntax,
-				regex: regex.source === EMPTY_REGEX_SOURCE ? null : regex,
+				regex,
+				empty: regex.source === EMPTY_REGEX_SOURCE,
 			}
 		}
 
@@ -91,7 +94,8 @@ export function searchTermToRegexResult(searchTerm: string, flagValues: Flags): 
 
 		return {
 			kind: 'full',
-			regex: regex.source === EMPTY_REGEX_SOURCE ? null : regex,
+			regex,
+			empty: regex.source === EMPTY_REGEX_SOURCE,
 		}
 	} catch (e) {
 		if (!(e instanceof SyntaxError)) throw e

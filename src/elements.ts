@@ -6,6 +6,8 @@ export function getElements() {
 	assert(container instanceof HTMLElement)
 	const document = container.shadowRoot
 	assert(document != null)
+	const textareaOuter = document.querySelector('.textarea')
+	assert(textareaOuter instanceof HTMLElement)
 	const ce = document.querySelector('[contenteditable]')
 	assert(ce instanceof HTMLElement)
 	const textarea = Object.defineProperty(
@@ -30,7 +32,7 @@ export function getElements() {
 	const workerRunner = window.document.getElementById(WORKER_RUNNER_ID)
 	assert(workerRunner instanceof HTMLIFrameElement)
 
-	return { container, workerRunner, textarea, info, infoMessage, flags }
+	return { container, workerRunner, textarea, textareaOuter, info, infoMessage, flags }
 }
 
 export const elements = getElements()
