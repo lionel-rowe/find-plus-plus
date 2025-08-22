@@ -250,17 +250,23 @@ function parseSetIndex(str: string): IndexSetter {
 	return (n: number) => n + inc
 }
 
-function setRangeIndex(value: IndexSetter) {
-	elements.info.classList.remove('error')
+type InfoDisplayState = typeof infoDisplayStates[number]
+const infoDisplayStates = ['loading', 'error', 'empty', 'ok'] as const
+function setInfoDisplayState(state: InfoDisplayState) {
+	for (const s of infoDisplayStates) {
+		elements.info.classList.toggle(s, s === state)
+	}
+}
 
+function setRangeIndex(value: IndexSetter) {
 	if (!ranges.length) {
-		elements.info.classList.add('empty')
+		setInfoDisplayState('empty')
 		elements.infoMessage.textContent = elements.textarea.value ? 'No results' : ''
 		CSS.highlights.delete(HIGHLIGHT_CURRENT_ID)
 		return
 	}
 
-	elements.info.classList.remove('empty')
+	setInfoDisplayState('ok')
 
 	rangeIndex = modulo(typeof value === 'function' ? value(rangeIndex) : value, ranges.length)
 	const range = ranges[rangeIndex]!
@@ -327,7 +333,7 @@ async function _updateSearch() {
 	if (result.kind === 'error') {
 		removeAllHighlights()
 		elements.infoMessage.textContent = result.error.message
-		elements.info.classList.add('error')
+		setInfoDisplayState('error')
 		return
 	}
 
@@ -359,8 +365,8 @@ async function _updateSearch() {
 	// only remove existing highlight & show loading spinner if results not retrieved within `SHOW_SPINNER_TIMEOUT_MS`
 	// to avoid unnecessary flicker
 	const loadingTimeout = setTimeout(() => {
-		elements.info.classList.add('loading')
 		removeAllHighlights()
+		setInfoDisplayState('loading')
 	}, SHOW_SPINNER_TIMEOUT_MS)
 	rangesPromise.then(() => clearTimeout(loadingTimeout))
 	try {
@@ -368,12 +374,11 @@ async function _updateSearch() {
 	} catch (e) {
 		removeAllHighlights()
 		elements.infoMessage.textContent = Error.isError(e) ? e.message : String(e)
-		elements.info.classList.remove('loading')
-		elements.info.classList.add('error')
+		setInfoDisplayState('error')
 		return
 	}
 
-	elements.info.classList.remove('loading')
+	setInfoDisplayState(ranges.length ? 'ok' : 'empty')
 	rangeIndex = 0
 
 	CSS.highlights.set(HIGHLIGHT_ALL_ID, new Highlight(...ranges))

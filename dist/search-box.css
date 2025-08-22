@@ -113,6 +113,10 @@
 				animation: spin 1s linear infinite;
 				margin-top: 2px;
 			}
+
+			.info-message {
+				display: none;
+			}
 		}
 	}
 }
