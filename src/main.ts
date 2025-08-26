@@ -113,10 +113,12 @@ async function* getMatches({ source, flags, text }: Pick<GetMatchesRequestData, 
 	}
 }
 
+class MismatchError extends Error {}
+
 async function getRangesOrError(
 	element: HTMLElement,
 	regex: RegExp,
-): Promise<Range[] | (DOMException & { name: 'AbortError' | 'TimeoutError' })> {
+): Promise<Range[] | MismatchError | (DOMException & { name: 'AbortError' | 'TimeoutError' })> {
 	const text = element.textContent ?? ''
 
 	const ranges: Range[] = []
@@ -125,24 +127,55 @@ async function getRangesOrError(
 
 	try {
 		let i = 0
-		for await (const { index, arr: m } of getMatches({ text, source: regex.source, flags: regex.flags })) {
+		for await (const { index, arr: [m] } of getMatches({ text, source: regex.source, flags: regex.flags })) {
 			const start = walker.next(index)
-			const end = walker.next(index + m[0].length)
-			assert(start != null && end != null)
+			const end = walker.next(index + m.length)
+			// TODO: throw on other types of mismatch scenarios
+			if (start == null || end == null) {
+				throw new MismatchError('Text node offset mismatch')
+			}
 			const range = new Range()
 			range.setStart(...start)
 			range.setEnd(...end)
 
-			if (filter(range, m[0])) {
+			if (filter(range, m)) {
 				ranges.push(range)
 				if (++i === options.maxMatches) break
 			}
 		}
 	} catch (e) {
-		if (isDomException(e, 'AbortError', 'TimeoutError')) {
+		if (isDomException(e, 'AbortError', 'TimeoutError') || e instanceof MismatchError) {
 			return e
 		}
 		throw e
+	}
+
+	return ranges
+}
+
+function getRangesSync(
+	element: HTMLElement,
+	regex: RegExp,
+): Range[] {
+	const text = element.textContent ?? ''
+
+	const ranges: Range[] = []
+
+	const walker = new TextNodeOffsetWalker(element)
+
+	let i = 0
+	for (const { index, 0: m } of text.matchAll(regex)) {
+		const start = walker.next(index)
+		const end = walker.next(index + m.length)
+		assert(start != null && end != null)
+		const range = new Range()
+		range.setStart(...start)
+		range.setEnd(...end)
+
+		if (filter(range, m)) {
+			ranges.push(range)
+			if (++i === options.maxMatches) break
+		}
 	}
 
 	return ranges
@@ -344,11 +377,29 @@ async function _updateSearch() {
 		setInfoDisplayState('loading')
 	}, SHOW_SPINNER_TIMEOUT_MS)
 	rangesPromise.then(() => clearTimeout(loadingTimeout)).catch(() => clearTimeout(loadingTimeout))
-	const r = await rangesPromise
-	if (Error.isError(r)) {
-		if (isDomException(r, 'AbortError')) return
+	const start = Date.now()
+	let r = await rangesPromise
+	errorHandler: if (Error.isError(r)) {
+		if (isDomException(r, 'AbortError')) {
+			// no-op
+			return
+		}
+		if (r instanceof MismatchError) {
+			const elapsed = Date.now() - start
+			if (elapsed < options.maxTimeout / 2) {
+				// retry synchronously (error is likely due to DOM mutations during async operation)
+				r = getRangesSync(document.body, regex)
+				break errorHandler
+			} else {
+				// most likely can't finish within timeout
+				r = new DOMException('Operation timed out', 'TimeoutError')
+			}
+		}
+
+		assert(isDomException(r, 'TimeoutError'))
+
 		removeAllHighlights()
-		elements.infoMessage.textContent = Error.isError(r) ? r.message : String(r)
+		elements.infoMessage.textContent = r.message
 		setInfoDisplayState('error')
 		return
 	}
