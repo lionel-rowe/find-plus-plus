@@ -4,6 +4,7 @@
 	"description": "Enhanced find-in-page, with regexes!",
 	"version": "0.0.0",
 	"icons": {
+		"128": "/icons/favicon.png"
 	},
 	"action": {
 	},
