@@ -1,4 +1,7 @@
 :root, :host {
+	/* prevent inherited styles from affecting component */
+	all: initial;
+
 	box-sizing: border-box;
 	color-scheme: dark;
 
@@ -16,6 +19,8 @@
 	@supports (color: contrast-color(#fff)) {
 		--accent-text-color: contrast-color(var(--accent-color));
 	}
+
+	font-family: sans-serif;
 }
 
 .textarea {

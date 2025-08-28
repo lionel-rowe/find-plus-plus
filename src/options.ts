@@ -4,6 +4,8 @@ import { getHtml } from './populateTemplate.ts'
 import { optionsStorage } from './storage.ts'
 import { roundTo } from './utils.ts'
 
+let dirty = false
+
 const html = await getHtml()
 
 function getElements() {
@@ -71,10 +73,13 @@ async function restoreOptions() {
 
 restoreOptions()
 
+elements.form.addEventListener('change', () => dirty = true)
+
 elements.form.addEventListener('submit', async (e) => {
 	e.preventDefault()
 	await saveOptions()
 	await chrome.runtime.sendMessage('optionsUpdated')
+	dirty = false
 })
 
 elements.form.addEventListener('reset', async (e) => {
@@ -84,5 +89,11 @@ elements.form.addEventListener('reset', async (e) => {
 		await optionsStorage.clear()
 		await chrome.runtime.sendMessage('optionsUpdated')
 		location.reload()
+	}
+})
+
+window.addEventListener('beforeunload', (e) => {
+	if (dirty) {
+		e.preventDefault()
 	}
 })

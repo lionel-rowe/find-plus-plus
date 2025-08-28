@@ -26,8 +26,12 @@
 			<div>
 				<h2>Colors</h2>
 				<div class="fields inline">
-					<label for="colors.all">All <input type="color" id="colors.all" name="colors.all"></label>
-					<label for="colors.current">
+					<label class="label" for="colors.all">All <input
+							type="color"
+							id="colors.all"
+							name="colors.all"
+						></label>
+					<label class="label" for="colors.current">
 						Current
 						<input
 							type="color"
@@ -35,7 +39,11 @@
 							name="colors.current"
 						>
 					</label>
-					<label for="colors.text">Text <input type="color" id="colors.text" name="colors.text"></label>
+					<label class="label" for="colors.text">Text <input
+							type="color"
+							id="colors.text"
+							name="colors.text"
+						></label>
 				</div>
 			</div>
 
@@ -44,26 +52,30 @@
 
 				<div class="fields">
 					<div>
-						<label for="max-timeout">
-							Max timeout
-							<input
-								type="number"
-								id="max-timeout"
-								name="max-timeout"
-								min="0.1"
-								step="0.1"
-								aria-describedby="max-timeout-hint"
-							>
-						</label>
-
+						<div class="label">
+							<label class="label" for="max-timeout">
+								Max timeout
+							</label>
+							<span>
+								<input
+									type="number"
+									id="max-timeout"
+									name="max-timeout"
+									min="0.1"
+									step="0.1"
+									aria-describedby="max-timeout-hint"
+								>
+								seconds
+							</span>
+						</div>
 						<div>
 							<small id="max-timeout-hint">
-								The maximum amount of time to attempt to find matches, in seconds.
+								The maximum amount of time to attempt to find matches.
 							</small>
 						</div>
 					</div>
 					<div>
-						<label for="max-matches">
+						<label class="label" for="max-matches">
 							Max matches
 							<input
 								type="number"
@@ -85,6 +97,11 @@
 			</div>
 
 			<div id="status"></div>
+
+			<div>
+				<h2>Keyboard Shortcuts</h2>
+				<p><a href="chrome://extensions/shortcuts">Edit keyboard shortcuts</a></p>
+			</div>
 
 			<div>
 				<button type="submit">💾 Save</button>

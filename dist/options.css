@@ -39,14 +39,17 @@ input[type='color'] {
 
 	label {
 		font-weight: bold;
+	}
+
+	.label {
 		input {
-			max-width: 8rem;
+			max-width: 3rem;
 		}
 	}
 
 	&.inline {
 		flex-direction: row;
-		label {
+		.label {
 			display: flex;
 			flex-direction: column;
 			font-size: 0.6rem;
@@ -54,7 +57,7 @@ input[type='color'] {
 	}
 
 	&:not(.inline) {
-		label {
+		.label {
 			display: grid;
 			grid-template-columns: 8rem 1fr;
 			align-items: baseline;
