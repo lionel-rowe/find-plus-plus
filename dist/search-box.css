@@ -146,6 +146,14 @@
 	}
 }
 
+.above-search-input {
+	display: flex;
+	justify-content: start;
+	gap: 0.5rem;
+	align-items: center;
+}
+
+.close-button,
 .options-button {
 	background: unset;
 	border: unset;
@@ -154,11 +162,6 @@
 	cursor: pointer;
 	padding: 0;
 	opacity: 0.6;
-	position: absolute;
-	--margin: 0.7rem;
-	margin: var(--margin);
-	top: 0;
-	right: 0;
 	--size: 1.5rem;
 	width: var(--size);
 	height: var(--size);
@@ -170,4 +173,14 @@
 	&:hover {
 		opacity: 1;
 	}
+}
+
+.close-button {
+	position: absolute;
+	top: 0;
+	right: 0;
+	--margin: 0.6rem;
+	font-size: 1.5rem;
+	line-height: 0;
+	--size: 2rem;
 }

@@ -13,25 +13,28 @@
 	<link rel="stylesheet" href="__SEARCH_BOX_STYLES_URL__">
 	<div class="search-box">
 		<div>
-			<button type="button" class="options-button" aria-label="Options" title="Options">
-				<span aria-hidden="true">⚙️</span>
+			<button type="button" class="close-button" aria-label="Close" title="Close">
+				<span aria-hidden="true">×</span>
 			</button>
-			<label class="label">
-				Find++
-				<!-- deno-fmt-ignore -->
-				<div class="textarea"><!--
-					--><span aria-hidden="true"><!--
-						maintain height if no content
-						-->&ZeroWidthSpace;<!--
-					--></span><!--
-					--><span
-						class="textarea-input"
-						contenteditable="plaintext-only"
-						spellcheck="false"
-					></span>
-					<!-- TODO: add info icon "(?)" to attach `title` to -->
-				</div>
-			</label>
+			<div class="above-search-input">
+				<label class="label" for="search-input">Find++</label>
+				<button type="button" class="options-button" aria-label="Options" title="Options">
+					<span aria-hidden="true">⚙️</span>
+				</button>
+			</div>
+			<!-- deno-fmt-ignore -->
+			<div id="search-input" class="textarea"><!--
+				--><span aria-hidden="true"><!--
+					maintain height if no content
+					-->&ZeroWidthSpace;<!--
+				--></span><!--
+				--><span
+					class="textarea-input"
+					contenteditable="plaintext-only"
+					spellcheck="false"
+				></span>
+				<!-- TODO: add info icon "(?)" to attach `title` to -->
+			</div>
 		</div>
 
 		<div class="info ok">

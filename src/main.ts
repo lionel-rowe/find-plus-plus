@@ -54,6 +54,7 @@ function setColors(options: AppOptions) {
 }
 
 document.addEventListener(CloseEvent.TYPE, close)
+elements.closeButton.addEventListener('click', close)
 
 document.dispatchEvent(new NotifyReadyEvent({ source: 'main' }))
 
@@ -386,20 +387,20 @@ async function _updateSearch() {
 		}
 		if (r instanceof MismatchError) {
 			const elapsed = Date.now() - start
-			if (elapsed < options.maxTimeout / 2) {
+			if (elapsed > options.maxTimeout / 2) {
+				// most likely can't finish within timeout
+				r = new DOMException(undefined, 'TimeoutError')
+			} else {
 				// retry synchronously (error is likely due to DOM mutations during async operation)
 				r = getRangesSync(document.body, regex)
 				break errorHandler
-			} else {
-				// most likely can't finish within timeout
-				r = new DOMException('Operation timed out', 'TimeoutError')
 			}
 		}
 
 		assert(isDomException(r, 'TimeoutError'))
 
 		removeAllHighlights()
-		elements.infoMessage.textContent = r.message
+		elements.infoMessage.textContent = 'Timed out'
 		setInfoDisplayState('error')
 		return
 	}
