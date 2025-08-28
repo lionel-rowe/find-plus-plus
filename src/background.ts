@@ -16,11 +16,7 @@ chrome.commands.onCommand.addListener(async (_command, tab) => {
 	const command = _command as Command
 	if (tab?.id == null) return
 	openTabIds.add(tab.id)
-	const commands = await chrome.commands.getAll()
-	const shortkeys = Object.fromEntries(
-		commands.map(({ name, shortcut, description }) => [name, { combo: shortcut, description }]),
-	) as ShortkeyConfig
-
+	const shortkeys = await getShortkeys()
 	const message: Message = { kind: 'command', command, shortkeys }
 
 	chrome.tabs.sendMessage(tab.id, message)
@@ -45,3 +41,17 @@ chrome.runtime.onMessage.addListener(async (request) => {
 		}
 	}
 })
+
+chrome.action.onClicked.addListener(async (tab) => {
+	if (tab?.id == null) return
+	const shortkeys = await getShortkeys()
+	const message: Message = { kind: 'command', command: 'open', shortkeys }
+	chrome.tabs.sendMessage(tab.id, message)
+})
+
+async function getShortkeys() {
+	const commands = await chrome.commands.getAll()
+	return Object.fromEntries(
+		commands.map(({ name, shortcut, description }) => [name, { combo: shortcut, description }]),
+	) as ShortkeyConfig
+}

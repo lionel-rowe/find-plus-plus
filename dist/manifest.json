@@ -5,6 +5,8 @@
 	"version": "0.0.0",
 	"icons": {
 	},
+	"action": {
+	},
 	"commands": {
 		"open": {
 			"suggested_key": {
