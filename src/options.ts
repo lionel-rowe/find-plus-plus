@@ -97,3 +97,17 @@ window.addEventListener('beforeunload', (e) => {
 		e.preventDefault()
 	}
 })
+
+// https://stackoverflow.com/questions/45348255/assign-command-keyboard-shortcut-from-popup-or-options
+// > `chrome://` URLs can be opened only via `chrome/WebExtensions` API methods,
+// > but not via `<a href="...">` links directly.
+document.body.addEventListener('click', (e) => {
+	const { target } = e
+	if (target instanceof HTMLAnchorElement && target.href) {
+		const url = new URL(target.href)
+		if (url.protocol === 'chrome:') {
+			chrome.tabs.create({ url: target.href })
+			e.preventDefault()
+		}
+	}
+})
