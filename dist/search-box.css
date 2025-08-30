@@ -37,7 +37,7 @@
 	z-index: 9007199254740991;
 
 	overflow: auto;
-	resize: both;
+	resize: inline;
 	/*
 		`dir`-ty hack to make the resize arrow show at bottom left not bottom right
 		https://stackoverflow.com/questions/60633726/is-there-a-way-to-change-the-css-resize-corners-position
