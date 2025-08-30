@@ -47,10 +47,17 @@ document.addEventListener(UpdateOptionsEvent.TYPE, (e) => {
 	setColors(e.detail.options)
 })
 
+const highlightStyles = new CSSStyleSheet()
+document.adoptedStyleSheets.push(highlightStyles)
+
 function setColors(options: AppOptions) {
-	document.documentElement.style.setProperty(`--${HIGHLIGHT_ALL_ID}`, options['colors.all'])
-	document.documentElement.style.setProperty(`--${HIGHLIGHT_CURRENT_ID}`, options['colors.current'])
-	document.documentElement.style.setProperty(`--${HIGHLIGHT_TEXT_ID}`, options['colors.text'])
+	const styleMapping = Object.entries({
+		[HIGHLIGHT_ALL_ID]: options['colors.all'],
+		[HIGHLIGHT_CURRENT_ID]: options['colors.current'],
+		[HIGHLIGHT_TEXT_ID]: options['colors.text'],
+	})
+
+	highlightStyles.replaceSync(`:root {${styleMapping.map(([id, color]) => `--${id}: ${color};`).join('')}}`)
 }
 
 document.addEventListener(CloseEvent.TYPE, close)
