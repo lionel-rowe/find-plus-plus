@@ -1,38 +1,56 @@
 // @ts-check
 // https://stackoverflow.com/questions/74026755/convert-svg-to-image-jpeg-png-etc-in-the-browser
 
-const $container = /** @type {HTMLElement} */ (document.getElementById('svg-container'))
-const $src = /** @type {HTMLImageElement} */ ($container.querySelector('img'))
-const $holder = /** @type {HTMLElement} */ (document.getElementById('img-container'))
-const $label = /** @type {HTMLElement} */ (document.getElementById('img-format'))
-
 /** @this {HTMLButtonElement} */
-async function convertSVGtoImg() {
+async function convertSvgToImg() {
+	const img = await ready(/** @type {HTMLImageElement} */ (document.querySelector('#svg-img')))
+
 	const format = this.dataset.format ?? 'png'
-	$label.textContent = format
+	const canvas = document.createElement('canvas')
+	canvas.width = img.naturalWidth
+	canvas.height = img.naturalHeight
+	const ctx = /** @type {CanvasRenderingContext2D} */ (canvas.getContext('2d'))
+	ctx.drawImage(img, 0, 0, img.naturalWidth, img.naturalHeight)
 
-	$holder.textContent = ''
+	/** @type {Promise<Blob>} */
+	const blobPromise = new Promise((res) =>
+		canvas.toBlob(
+			(blob) => res(/** @type {Blob} */ (blob)),
+			`image/${format}`,
+		)
+	)
 
-	if (!$src.complete) {
-		await new Promise((res, rej) => {
-			$src.onload = res
-			$src.onerror = rej
-		})
-	}
-
-	const $canvas = document.createElement('canvas')
-	$canvas.width = $src.naturalWidth
-	$canvas.height = $src.naturalHeight
-	const ctx = /** @type {CanvasRenderingContext2D} */ ($canvas.getContext('2d'))
-	ctx.drawImage($src, 0, 0, $src.naturalWidth, $src.naturalHeight)
-
-	const dataURL = $canvas.toDataURL(`image/${format}`, 1.0)
-
-	const $trg = document.createElement('img')
-	$trg.src = dataURL
-	$holder.appendChild($trg)
+	download(await blobPromise, `favicon.${format}`)
 }
 
-for (const $btn of /** @type {HTMLButtonElement[]} */ ([...document.querySelectorAll('[data-format]')])) {
-	$btn.addEventListener('click', convertSVGtoImg)
+for (const btn of /** @type {Iterable<HTMLButtonElement>} */ (document.querySelectorAll('[data-format]'))) {
+	btn.addEventListener('click', convertSvgToImg)
+}
+
+/** @param {[file: File] | [blob: Blob, name: string]} args */
+function download(...[file, name]) {
+	const a = document.createElement('a')
+	const href = URL.createObjectURL(file)
+	try {
+		a.href = href
+		a.download = name ?? (file instanceof File ? file.name : '')
+		a.hidden = true
+		document.body.append(a)
+		a.click()
+	} finally {
+		URL.revokeObjectURL(href)
+		a.remove()
+	}
+}
+
+/**
+ * @param {HTMLImageElement} img
+ * @returns {Promise<HTMLImageElement>}
+ */
+function ready(img) {
+	return new Promise((res, rej) => {
+		if (img.complete) return res(img)
+		img.addEventListener('load', () => res(img))
+		img.addEventListener('error', (e) => rej(e.error))
+	})
 }
