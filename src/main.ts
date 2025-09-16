@@ -24,6 +24,7 @@ import { getElementAncestor } from './scrollParent.ts'
 import type { GetMatchesRequestData } from './worker.ts'
 import { GetMatchesResponseData } from './worker.ts'
 import { isDomException } from '@li/is-dom-exception'
+import { eventMatchesCombo, eventToCombo } from './shortkeys.ts'
 
 let options = defaultOptions
 
@@ -189,21 +190,33 @@ function getRangesSync(
 	return ranges
 }
 
+const IGNORED_ELEMENT_SELECTOR = [
+	'script',
+	'style',
+	// TODO: Support `textarea` somehow? Currently doesn't work properly due to reading `textContent`/`innerText`,
+	// which doesn't update when `textarea`'s content is changed; additionally, `Range` objects don't work properly
+	// within `textarea`s, so impossible to highlight.
+	'textarea',
+	// TODO: Support `input` somehow? Same issues as `textarea`
+	'input',
+].join(', ')
+
 function filter(range: Range, text: string) {
 	const element = getElementAncestor(range.commonAncestorContainer)
 	if (!/\S/.test(text)) return false
-	return !element.matches('script, style') && element.checkVisibility()
+	return !element.matches(IGNORED_ELEMENT_SELECTOR) && element.checkVisibility()
 }
 
 let ranges: Range[] = []
 let rangeIndex = 0
 
 const cssLoaded = Promise.all(
-	[...elements.container.shadowRoot!.querySelectorAll('link[rel=stylesheet]' as 'link')].map(async (style) => {
-		if (style.sheet == null) {
-			await new Promise<void>((res) => style.addEventListener('load', () => res(), { once: true }))
-		}
-	}),
+	[...elements.container.shadowRoot!.querySelectorAll('link[rel=stylesheet]' as 'link')]
+		.map(async (style) => {
+			if (style.sheet == null) {
+				await new Promise((res) => style.addEventListener('load', res, { once: true }))
+			}
+		}),
 )
 
 // delegate focus to input
@@ -231,9 +244,7 @@ elements.textarea.addEventListener('keydown', (e) => {
 	// prevent simple inputs like `<kbd>e</kbd>` on sites like GitHub from acting as site shortcuts when typing normally
 	if (/^.$/.test(e.key) && !e.ctrlKey && !e.altKey && !e.metaKey) {
 		e.stopPropagation()
-	}
-
-	if (e.key === 'Enter') {
+	} else if (e.key === 'Enter') {
 		e.preventDefault()
 
 		if (e.ctrlKey) {
@@ -244,6 +255,9 @@ elements.textarea.addEventListener('keydown', (e) => {
 			const inc = e.shiftKey ? -1 : 1
 			setRangeIndex((n) => n + inc)
 		}
+	} else if (eventMatchesCombo(e, 'Ctrl+A')) {
+		// prevent "select all" from propagating to other page elements (e.g. on GitHub)
+		e.stopPropagation()
 	}
 })
 

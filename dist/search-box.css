@@ -33,8 +33,7 @@
 }
 
 .search-box {
-	/* == Number.MAX_SAFE_INTEGER == 0x1fffffffffffff */
-	z-index: 9007199254740991;
+	z-index: calc(infinity);
 
 	overflow: auto;
 	resize: inline;

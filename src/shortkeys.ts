@@ -1,5 +1,7 @@
 import { escapeHtml } from './utils.ts'
 
+// TODO: collocate different forms of keys together and document properly ("normalized", "pretty", "combo", etc.)
+
 declare global {
 	interface Navigator {
 		userAgentData?: {
@@ -24,14 +26,54 @@ export type KbdEvent = {
 	key: string
 } & Partial<Record<typeof eventModifiers[keyof typeof eventModifiers], boolean>>
 
-export function eventMatchesCombo(e: KbdEvent, combo: string) {
-	const eventCombo = eventToCombo(e)
-	return eventCombo && (eventCombo === combo)
+function capitalize(s: string) {
+	return s.charAt(0).toUpperCase() + s.slice(1).toLowerCase()
 }
 
 // https://superuser.com/questions/1238062/key-combination-order
-const eventModifiers = Object.fromEntries((['ctrl', 'alt', 'shift', 'meta'] as const)
-	.map((k) => [k, `${k}Key` as const]))
+const bareEventModifiers = ['ctrl', 'alt', 'shift', 'meta'] as const
+const eventModifiers = Object.fromEntries(bareEventModifiers.map((k) => [k, `${k}Key` as const]))
+const normalizedEventModifiers = bareEventModifiers.map((k) => {
+	const x = capitalize(k)
+	return normalized.get(x) ?? x
+})
+
+function indexOrMax(arr: string[], val: string) {
+	const idx = arr.indexOf(val)
+	return idx === -1 ? arr.length : idx
+}
+
+const PLUS_SPLITTER = /(?<!\+)\+|(?<=\+\+)\+/
+
+function normalizeCombo(combo: string) {
+	if (!combo) return ''
+
+	const parts = [
+		...new Set(
+			combo.split(PLUS_SPLITTER).map((x) => {
+				x = capitalize(x)
+				return normalized.get(x) ?? x
+			}),
+		),
+	]
+		.sort((a, b) => {
+			return (Number(a.length === 1) - Number(b.length === 1)) ||
+				(indexOrMax(normalizedEventModifiers, a) - indexOrMax(normalizedEventModifiers, b)) ||
+				(a > b ? 1 : -1)
+		})
+
+	const singleCharIdx = parts.findIndex((x) => x.length === 1)
+	if (singleCharIdx !== -1) {
+		parts[singleCharIdx] = parts[singleCharIdx][`to${parts.includes('Shift') ? 'Upper' : 'Lower'}Case`]()
+	}
+
+	return parts.join('+')
+}
+
+export function eventMatchesCombo(e: KbdEvent, combo: string) {
+	const eventCombo = eventToCombo(e)
+	return eventCombo && (eventCombo === normalizeCombo(combo))
+}
 
 function keyToPretty(key: string) {
 	const prettyFmtMap = new Map([
@@ -47,15 +89,16 @@ function keyToPretty(key: string) {
 
 	return prettyFmtMap.get(key) ?? (key.length === 1 ? key.toUpperCase() : key)
 }
+
 export function comboToPretty(combo: string) {
-	return combo.split('+').map((x) => {
+	return combo.split(PLUS_SPLITTER).map((x) => {
 		const pretty = keyToPretty(x)
 		return /[+-]/.test(pretty) ? `"${pretty}"` : pretty
 	}).join('+')
 }
 
 export function comboToPrettyHtml(combo: string) {
-	return combo.split('+').map((x) => `<kbd>${escapeHtml(keyToPretty(x))}</kbd>`).join('<span>+</span>')
+	return combo.split(PLUS_SPLITTER).map((x) => `<kbd>${escapeHtml(keyToPretty(x))}</kbd>`).join('<span>+</span>')
 }
 
 export function eventToCombo(e: KbdEvent) {
@@ -63,8 +106,7 @@ export function eventToCombo(e: KbdEvent) {
 		.filter((k) => e[eventModifiers[k]])
 		.map((x) => x.charAt(0).toUpperCase() + x.slice(1))
 
-	if (['Control', 'Alt', 'Shift', 'Meta'].includes(e.key)) return null
 	const key = e.key.length > 1 ? e.key : e.shiftKey ? e.key.toUpperCase() : e.key.toLowerCase()
 
-	return [...modifierKeys, key].map((x) => normalized.has(x) ? normalized.get(x) : x).join('+')
+	return normalizeCombo([...modifierKeys, key].map((x) => normalized.has(x) ? normalized.get(x) : x).join('+'))
 }

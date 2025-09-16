@@ -3,10 +3,11 @@ import { comboToPretty, eventMatchesCombo, eventToCombo, type KbdEvent, platform
 import { stubProperty } from '@std/testing/unstable-stub-property'
 
 type Test = {
-	combo: string | null
+	combo: string
 	event: KbdEvent
 	apple?: string
 	windows?: string
+	variants?: string[]
 }
 
 const tests: Test[] = [
@@ -15,16 +16,19 @@ const tests: Test[] = [
 		combo: 'z',
 		apple: 'Z',
 		windows: 'Z',
+		variants: ['Z'],
 	},
 	{
 		event: { key: 'Z' },
 		combo: 'z',
 		apple: 'Z',
 		windows: 'Z',
+		variants: ['z'],
 	},
 	{
 		event: { key: 'Tab' },
 		combo: 'Tab',
+		variants: ['tab', 'TAB'],
 	},
 	{
 		event: { key: ' ' },
@@ -47,28 +51,40 @@ const tests: Test[] = [
 		combo: 'Control+z',
 		apple: 'Control+Z',
 		windows: 'Ctrl+Z',
+		variants: ['Ctrl+z', 'Ctrl+Z', 'Control+Z'],
 	},
 	{
 		event: { key: ' ', ctrlKey: true },
 		combo: 'Control+Space',
 		apple: 'Control+Space',
 		windows: 'Ctrl+Space',
+		variants: ['space+ctrl'],
 	},
 	{
 		event: { key: 'z', ctrlKey: true, shiftKey: true },
 		combo: 'Control+Shift+Z',
 		apple: 'Control+Shift+Z',
 		windows: 'Ctrl+Shift+Z',
+		variants: ['Shift+Control+Z', 'Shift+Ctrl+Z', 'Ctrl+Shift+Z'],
 	},
 	{
 		event: { key: 'Z', ctrlKey: true, altKey: true, shiftKey: true, metaKey: true },
 		combo: 'Control+Alt+Shift+Meta+Z',
 		apple: 'Control+⌥+Shift+⌘+Z',
 		windows: 'Ctrl+Alt+Shift+⊞+Z',
+		variants: ['z+meta+shift+alt+control'],
 	},
 	{
 		event: { key: 'Control', ctrlKey: true },
-		combo: null,
+		combo: 'Control',
+		windows: 'Ctrl',
+		variants: ['ctrl'],
+	},
+	{
+		event: { key: 'Control', ctrlKey: true, shiftKey: true },
+		combo: 'Control+Shift',
+		windows: 'Ctrl+Shift',
+		variants: ['shift+CONTROL'],
 	},
 ]
 
@@ -97,6 +113,10 @@ Deno.test(eventToCombo.name, async (t) => {
 	}
 })
 Deno.test(eventMatchesCombo.name, async (t) => {
+	assert(
+		eventMatchesCombo({ key: 'a', ctrlKey: true }, 'Ctrl+A'),
+	)
+
 	for (const test of tests) {
 		const { combo } = test
 		if (combo == null) continue
@@ -104,5 +124,10 @@ Deno.test(eventMatchesCombo.name, async (t) => {
 			assert(eventMatchesCombo(test.event, combo))
 			assert(!eventMatchesCombo(test.event, 'Alt+Z'))
 		})
+		for (const altCombo of test.variants ?? []) {
+			await t.step(`${test.combo} ~= ${altCombo}`, () => {
+				assert(eventMatchesCombo(test.event, altCombo))
+			})
+		}
 	}
 })

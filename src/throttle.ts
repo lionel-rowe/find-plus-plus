@@ -24,7 +24,7 @@ export function throttle<T extends Array<any>>(
 ): ThrottledFunction<T> {
 	const ensureLast = Boolean(options?.ensureLast)
 
-	let lastExecution = NaN
+	let lastExecution = -Infinity
 	let flush: (() => void) | null = null
 
 	let tf = typeof timeframe === 'function' ? 0 : timeframe
@@ -53,11 +53,11 @@ export function throttle<T extends Array<any>>(
 	}) as ThrottledFunction<T>
 
 	throttled.clear = () => {
-		lastExecution = NaN
+		lastExecution = -Infinity
 	}
 
 	throttled.flush = () => {
-		lastExecution = NaN
+		lastExecution = -Infinity
 		flush?.()
 		throttled.clear()
 	}

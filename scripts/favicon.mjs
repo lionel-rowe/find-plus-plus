@@ -27,8 +27,12 @@ for (const btn of /** @type {Iterable<HTMLButtonElement>} */ (document.querySele
 	btn.addEventListener('click', convertSvgToImg)
 }
 
-/** @param {[file: File] | [blob: Blob, name: string]} args */
-function download(...[file, name]) {
+/**
+ * @overload @param {Blob} file @param {string} name @return {void}
+ * @overload @param {File} file @return {void}
+ * @param {Blob} file @param {string} [name]
+ */
+function download(file, name) {
 	const a = document.createElement('a')
 	const href = URL.createObjectURL(file)
 	try {
