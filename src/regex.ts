@@ -69,7 +69,7 @@ type RegexErrorResult = {
 	error: SyntaxError
 }
 
-type RegexConfig = RegexSourceOnlyResult | RegexFullResult | RegexErrorResult
+export type RegexConfig = RegexSourceOnlyResult | RegexFullResult | RegexErrorResult
 
 export function searchTermToRegexResult(searchTerm: string, flagValues: Flags): RegexConfig {
 	const m = searchTerm.match(REGEX_REGEX)
