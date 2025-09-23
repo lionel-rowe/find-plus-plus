@@ -52,7 +52,11 @@
 	width: 25rem;
 
 	color: white;
-	background: #222;
+
+	background: hsl(0deg 0% 0% / 0.7);
+	box-shadow: 0 0.2rem 2rem hsl(0deg 0% 0% / 0.9);
+	backdrop-filter: blur(0.15rem);
+
 	padding: 0.8rem;
 	border-width: var(--border-width);
 	border-color: var(--border-color);
