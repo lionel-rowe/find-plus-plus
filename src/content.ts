@@ -25,13 +25,11 @@ async function handle(message: Message) {
 
 				// On legacy sites, `document.body` can also be a `<frameset>` 😲
 				// https://stackoverflow.com/questions/35297274/why-is-document-body-not-a-htmlbodyelement
-				const [root, html] = await Promise.all([waitForElement('body, frameset'), getHtml()])
+				const [root, html] = await Promise.all([waitForElement(() => document.body), getHtml()])
 				await initialize(root, html)
 				ready.resolve()
 				ready.finalized = true
 			}
-
-			// await ready.promise
 
 			document.dispatchEvent(new CommandEvent(message))
 
@@ -66,32 +64,23 @@ async function initialize(root: Element, html: string) {
 	iframe.src = chrome.runtime.getURL('/worker-runner.html')
 	iframe.id = WORKER_RUNNER_ID
 	iframe.hidden = true
-	const ac = new AbortController()
-	await Promise.all([
-		new Promise<void>((res) =>
-			globalThis.addEventListener('message', (e) => {
-				if (e.source === iframe.contentWindow && e.data.kind === NotifyReadyEvent.TYPE) {
-					res()
-					ac.abort()
-				}
-			}, { signal: ac.signal })
-		),
-		root.append(iframe),
-	])
 
 	const script = document.createElement('script')
 	// script.type = 'module'
 	script.src = chrome.runtime.getURL('/main.js')
-	root.append(script)
-	await new Promise<void>((res) =>
-		document.addEventListener(NotifyReadyEvent.TYPE, (e) => {
-			assert(e instanceof NotifyReadyEvent)
-			assert(e.detail.source === 'main')
-			res()
-		}, { once: true })
-	)
 
-	const options = await optionsStorage.get(defaultOptions)
+	const [options] = await Promise.all([
+		optionsStorage.get(defaultOptions),
+		new Promise<void>((res) =>
+			document.addEventListener(NotifyReadyEvent.TYPE, (e) => {
+				assert(e instanceof NotifyReadyEvent)
+				assert(e.detail.source === 'main')
+				res()
+			}, { once: true })
+		),
+		root.append(script, iframe),
+	])
+
 	document.dispatchEvent(new UpdateOptionsEvent({ options }))
 }
 

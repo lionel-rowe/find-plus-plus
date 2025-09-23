@@ -13,7 +13,14 @@ import { assert } from '@std/assert/assert'
 import { elements } from './elements.ts'
 import { TextNodeOffsetWalker } from './textNodeOffset.ts'
 import { throttle } from '@std/async/unstable-throttle'
-import { CloseEvent, CommandEvent, NotifyReadyEvent, OpenOptionsPageEvent, UpdateOptionsEvent } from './events.ts'
+import {
+	CheckReadyEvent,
+	CloseEvent,
+	CommandEvent,
+	NotifyReadyEvent,
+	OpenOptionsPageEvent,
+	UpdateOptionsEvent,
+} from './events.ts'
 import { searchTermToRegexResult } from './regex.ts'
 import type { AppOptions, Command } from './types.ts'
 import { type FlagName, getFlags, setFlagDefaults, updateShortkeyHints } from './flagForm.ts'
@@ -66,12 +73,28 @@ elements.closeButton.addEventListener('click', close)
 
 document.dispatchEvent(new NotifyReadyEvent({ source: 'main' }))
 
+const workerRunnerReady = (() => {
+	const ac = new AbortController()
+	return Promise.all([
+		new Promise<void>((res) =>
+			globalThis.addEventListener('message', (e) => {
+				if (e.data.kind === NotifyReadyEvent.TYPE && e.source === elements.workerRunner.contentWindow) {
+					res()
+					ac.abort()
+				}
+			}, { signal: ac.signal })
+		),
+		elements.workerRunner.contentWindow?.postMessage({ kind: CheckReadyEvent.TYPE }, { targetOrigin: '*' }),
+	])
+})()
+
 let isOpen = false
 
 let currentAc = new AbortController()
 let _reqNo = 0
 
 async function* getMatches({ source, flags, text }: Pick<GetMatchesRequestData, 'source' | 'flags' | 'text'>) {
+	await workerRunnerReady
 	const reqNo = ++_reqNo
 	currentAc.abort()
 	currentAc = new AbortController()

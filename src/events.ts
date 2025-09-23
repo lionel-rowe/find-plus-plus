@@ -17,6 +17,10 @@ abstract class AppEvent<D = undefined> extends CustomEvent<D> {
 	}
 }
 
+export class CheckReadyEvent extends AppEvent {
+	static override readonly TYPE = namespaced('check-ready')
+}
+
 type NotifyReadySource = 'main' | 'worker-runner'
 export class NotifyReadyEvent extends AppEvent<{ source: NotifyReadySource }> {
 	static override readonly TYPE = namespaced('notify-ready')

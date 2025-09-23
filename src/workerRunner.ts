@@ -1,11 +1,15 @@
 import { assert } from '@std/assert/assert'
-import { WORKER_READY } from './config.ts'
-import { NotifyReadyEvent } from './events.ts'
+import { GET_MATCHES_REQUEST, WORKER_READY } from './config.ts'
+import { CheckReadyEvent, NotifyReadyEvent } from './events.ts'
 
 // TODO: scope to `globalThis.parent.origin` somehow if possible (not directly readable from this frame)
 const targetOrigin = '*'
 
-globalThis.parent.postMessage({ kind: NotifyReadyEvent.TYPE }, { targetOrigin })
+function notifyReady() {
+	globalThis.parent.postMessage({ kind: NotifyReadyEvent.TYPE }, { targetOrigin })
+}
+
+notifyReady()
 
 const workerUrl = '/worker.js'
 
@@ -29,12 +33,24 @@ let workerPromise = getWorker()
 
 // forward all messages to worker
 globalThis.addEventListener('message', async (e) => {
-	if (e.data.kind === 'restart') {
-		worker?.terminate()
-		workerPromise = getWorker()
-		return
+	switch (e.data.kind) {
+		case 'restart': {
+			worker?.terminate()
+			workerPromise = getWorker()
+			break
+		}
+		case CheckReadyEvent.TYPE: {
+			notifyReady()
+			break
+		}
+		case GET_MATCHES_REQUEST: {
+			worker = await workerPromise
+			worker.postMessage(e.data)
+			break
+		}
+		default: {
+			// deno-lint-ignore no-console
+			console.error('Unknown message in workerRunner:', e.data)
+		}
 	}
-
-	worker = await workerPromise
-	worker.postMessage(e.data)
 })
