@@ -34,6 +34,19 @@ export const defaultOptions: AppOptions = {
 	'defaults.matchCase': false,
 	'defaults.wholeWord': false,
 	'defaults.useRegex': true,
+	'defaults.normalizeDiacritics': false,
+
+	// // TODO:
+	// // 1. Flatten options config
+	// // 2. Make configurable again via options page (not via manifest.json, as max 4 commands allowed there)
+	// { name: 'matchCase', shortcut: 'Alt+C', description: 'Match case-sensitively' },
+	// { name: 'wholeWord', shortcut: 'Alt+W', description: 'Only match whole words' },
+	// { name: 'useRegex', shortcut: 'Alt+R', description: 'Use regular expression syntax' },
+	// { name: 'normalizeDiacritics', shortcut: 'Alt+D', description: 'Normalize diacritics (e.g. é -> e)' },
+	'shortkeys.matchCase': 'Alt+C',
+	'shortkeys.wholeWord': 'Alt+W',
+	'shortkeys.useRegex': 'Alt+R',
+	'shortkeys.normalizeDiacritics': 'Alt+D',
 
 	'colors.all': '#ffff00', // yellow
 	'colors.current': '#ff8c00', // darkorange

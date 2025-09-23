@@ -4,7 +4,7 @@ import * as CONFIG from './config.ts'
 const { defaultOptions: _, ...ids } = CONFIG
 
 export async function getHtml() {
-	const template = await (await fetch(chrome.runtime.getURL('/template.html'))).text()
+	const template = await (await fetch(chrome.runtime.getURL('/search-box.html'))).text()
 	const config = {
 		...ids,
 		SEARCH_BOX_STYLES_URL: chrome.runtime.getURL('/search-box.css'),

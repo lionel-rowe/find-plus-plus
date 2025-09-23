@@ -1,9 +1,11 @@
 import { assert } from '@std/assert/assert'
+import { Normalization } from './worker.ts'
 
 export type Flags = {
 	regexSyntax: boolean
 	matchCase: boolean
 	wholeWord: boolean
+	normalizeDiacritics: boolean
 }
 
 const REGEX_REGEX = /^\s*\/(?<source>.+)\/(?<flags>[dgimsuvy]*)\s*$/su
@@ -56,23 +58,28 @@ type RegexSourceOnlyResult = {
 	usesRegexSyntax: boolean
 	regex: RegExp
 	empty: boolean
+	normalizations: Normalization[]
 }
 
 type RegexFullResult = {
 	kind: 'full'
 	regex: RegExp
 	empty: boolean
+	normalizations: Normalization[]
 }
 
 type RegexErrorResult = {
 	kind: 'error'
 	error: SyntaxError
+	normalizations: Normalization[]
 }
 
 export type RegexConfig = RegexSourceOnlyResult | RegexFullResult | RegexErrorResult
 
 export function searchTermToRegexResult(searchTerm: string, flagValues: Flags): RegexConfig {
 	const m = searchTerm.match(REGEX_REGEX)
+	const normalizations: Normalization[] = []
+	if (flagValues.normalizeDiacritics) normalizations.push('diacritics')
 
 	try {
 		if (m == null) {
@@ -83,6 +90,7 @@ export function searchTermToRegexResult(searchTerm: string, flagValues: Flags): 
 				usesRegexSyntax: flagValues.regexSyntax,
 				regex,
 				empty: regex.source === EMPTY_REGEX_SOURCE,
+				normalizations,
 			}
 		}
 
@@ -96,6 +104,7 @@ export function searchTermToRegexResult(searchTerm: string, flagValues: Flags): 
 			kind: 'full',
 			regex,
 			empty: regex.source === EMPTY_REGEX_SOURCE,
+			normalizations,
 		}
 	} catch (e) {
 		if (!(e instanceof SyntaxError)) throw e
@@ -103,6 +112,7 @@ export function searchTermToRegexResult(searchTerm: string, flagValues: Flags): 
 		return {
 			kind: 'error',
 			error: e,
+			normalizations,
 		}
 	}
 }

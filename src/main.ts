@@ -28,29 +28,48 @@ import { RegexSyntaxHighlights, regexSyntaxHighlightTypes } from './syntaxHighli
 import { trimBy } from '@std/text/unstable-trim-by'
 import { scrollIntoView } from './scrollToRange.ts'
 import { getElementAncestor } from './scrollParent.ts'
-import type { GetMatchesRequestData } from './worker.ts'
+import type { GetMatchesRequestData, Normalization } from './worker.ts'
 import { GetMatchesResponseData } from './worker.ts'
 import { isDomException } from '@li/is-dom-exception'
-import { eventMatchesCombo, eventToCombo } from './shortkeys.ts'
+import { eventMatchesCombo } from './shortkeys.ts'
+import { NormalizedMatcher } from '@li/irregex/matchers/normalized'
+import { normalizersFor } from './normalizers.ts'
 
 let options = defaultOptions
 
-const commandMap: Record<Command, (e: CommandEvent) => void> = {
+type ShortKey = Command | 'matchCase' | 'wholeWord' | 'useRegex' | 'normalizeDiacritics'
+
+const shortKeyMap: Record<ShortKey, (e: CommandEvent) => void> = {
+	// "hard" shortkey i.e. native command
 	open,
-	matchCase: toggleFlag('match-case'),
-	wholeWord: toggleFlag('whole-word'),
-	useRegex: toggleFlag('use-regex'),
+	// "soft" shortkeys
+	matchCase: toggleFlag('matchCase'),
+	wholeWord: toggleFlag('wholeWord'),
+	useRegex: toggleFlag('useRegex'),
+	normalizeDiacritics: toggleFlag('normalizeDiacritics'),
 }
 
 document.addEventListener(CommandEvent.TYPE, (e) => {
 	assert(e instanceof CommandEvent)
-	commandMap[e.detail.command](e)
+	shortKeyMap[e.detail.command](e)
 })
 
 document.addEventListener(UpdateOptionsEvent.TYPE, (e) => {
 	assert(e instanceof UpdateOptionsEvent)
-	// only on first load (i.e. if options still reference-equal to defaultOptions)
-	if (options === defaultOptions) setFlagDefaults(elements.flags, e.detail.options)
+
+	const shortkeys = {
+		matchCase: { combo: options['shortkeys.matchCase'], description: 'Match Case' },
+		wholeWord: { combo: options['shortkeys.wholeWord'], description: 'Whole Word' },
+		useRegex: { combo: options['shortkeys.useRegex'], description: 'Use Regex' },
+		normalizeDiacritics: { combo: options['shortkeys.normalizeDiacritics'], description: 'Normalize Diacritics' },
+	}
+
+	updateShortkeyHints(elements.flags, shortkeys, true)
+
+	if (options === defaultOptions) {
+		// only on first load (i.e. if options still reference-equal to defaultOptions)
+		setFlagDefaults(elements.flags, e.detail.options)
+	}
 	options = e.detail.options
 	setColors(e.detail.options)
 })
@@ -93,7 +112,12 @@ let isOpen = false
 let currentAc = new AbortController()
 let _reqNo = 0
 
-async function* getMatches({ source, flags, text }: Pick<GetMatchesRequestData, 'source' | 'flags' | 'text'>) {
+async function* getMatches(
+	{ source, flags, text, normalizations }: Pick<
+		GetMatchesRequestData,
+		'source' | 'flags' | 'text' | 'normalizations'
+	>,
+) {
 	await workerRunnerReady
 	const reqNo = ++_reqNo
 	currentAc.abort()
@@ -117,6 +141,7 @@ async function* getMatches({ source, flags, text }: Pick<GetMatchesRequestData, 
 			start: i++ * PAGE_SIZE,
 			num: PAGE_SIZE,
 			reqNo,
+			normalizations,
 		}
 
 		const [{ results }] = await Promise.all([
@@ -150,6 +175,7 @@ class MismatchError extends Error {}
 async function getRangesOrError(
 	element: HTMLElement,
 	regex: RegExp,
+	normalizations: Normalization[],
 ): Promise<Range[] | MismatchError | (DOMException & { name: 'AbortError' | 'TimeoutError' })> {
 	const text = element.textContent ?? ''
 
@@ -159,7 +185,9 @@ async function getRangesOrError(
 
 	try {
 		let i = 0
-		for await (const { index, arr: [m] } of getMatches({ text, source: regex.source, flags: regex.flags })) {
+		for await (
+			const { index, arr: [m] } of getMatches({ text, source: regex.source, flags: regex.flags, normalizations })
+		) {
 			const start = walker.next(index)
 			const end = walker.next(index + m.length)
 			// TODO: throw on other types of mismatch scenarios
@@ -188,12 +216,20 @@ async function getRangesOrError(
 function getRangesSync(
 	element: HTMLElement,
 	regex: RegExp,
+	normalizations: Normalization[],
 ): Range[] {
 	const text = element.textContent ?? ''
 
 	const ranges: Range[] = []
 
 	const walker = new TextNodeOffsetWalker(element)
+
+	if (normalizations.length) {
+		regex = new NormalizedMatcher({
+			matcher: regex,
+			normalizers: normalizersFor(normalizations),
+		}).asRegExp()
+	}
 
 	let i = 0
 	for (const { index, 0: m } of text.matchAll(regex)) {
@@ -245,9 +281,7 @@ const cssLoaded = Promise.all(
 // delegate focus to input
 elements.textareaOuter.addEventListener('click', () => elements.textarea.focus())
 
-async function open(e: CommandEvent) {
-	updateShortkeyHints(elements.flags, e.detail.shortkeys, true)
-
+async function open(_e: CommandEvent) {
 	await cssLoaded
 
 	elements.container.hidden = false
@@ -281,6 +315,15 @@ elements.textarea.addEventListener('keydown', (e) => {
 	} else if (eventMatchesCombo(e, 'Ctrl+A')) {
 		// prevent "select all" from propagating to other page elements (e.g. on GitHub)
 		e.stopPropagation()
+	} else {
+		for (const name of ['matchCase', 'wholeWord', 'useRegex', 'normalizeDiacritics'] as const) {
+			if (eventMatchesCombo(e, options[`shortkeys.${name}`])) {
+				toggleFlag(name)()
+				e.preventDefault()
+				e.stopPropagation()
+				break
+			}
+		}
 	}
 })
 
@@ -414,7 +457,7 @@ async function _updateSearch() {
 		return
 	}
 
-	const rangesPromise = getRangesOrError(document.body, regex)
+	const rangesPromise = getRangesOrError(document.body, regex, result.normalizations)
 	// only remove existing highlight & show loading spinner if results not retrieved within `SHOW_SPINNER_TIMEOUT_MS`
 	// to avoid unnecessary flicker
 	const loadingTimeout = setTimeout(() => {
@@ -436,7 +479,7 @@ async function _updateSearch() {
 				r = new DOMException(undefined, 'TimeoutError')
 			} else {
 				// retry synchronously (error is likely due to DOM mutations during async operation)
-				r = getRangesSync(document.body, regex)
+				r = getRangesSync(document.body, regex, result.normalizations)
 				break errorHandler
 			}
 		}

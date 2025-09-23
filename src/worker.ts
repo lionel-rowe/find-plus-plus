@@ -1,5 +1,9 @@
+import { NormalizedMatcher } from '@li/irregex/matchers/normalized'
 import { GET_MATCHES_REQUEST, GET_MATCHES_RESPONSE, WORKER_READY } from './config.ts'
+import { normalizersFor } from './normalizers.ts'
 
+// TODO: maybe others? (e.g. whitespace)
+export type Normalization = 'diacritics'
 export type GetMatchesRequestData = {
 	kind: typeof GET_MATCHES_REQUEST
 	source: string
@@ -8,6 +12,7 @@ export type GetMatchesRequestData = {
 	start: number
 	num: number
 	reqNo: number
+	normalizations: Normalization[]
 }
 
 export type GetMatchesResponseData = {
@@ -30,10 +35,16 @@ globalThis.postMessage({ kind: WORKER_READY })
 globalThis.addEventListener('message', (e) => {
 	switch (e.data.kind) {
 		case GET_MATCHES_REQUEST: {
-			const { source, flags, text, start, num, reqNo } = e.data as GetMatchesRequestData
+			const { source, flags, text, start, num, reqNo, normalizations } = e.data as GetMatchesRequestData
 
 			if (source !== regex.source || flags !== regex.flags) {
 				regex = new RegExp(source, flags)
+				if (normalizations.includes('diacritics')) {
+					regex = new NormalizedMatcher({
+						matcher: regex,
+						normalizers: normalizersFor(normalizations),
+					}).asRegExp()
+				}
 				matches.length = 0
 				matchIter = text.matchAll(regex)[Symbol.iterator]()
 			}

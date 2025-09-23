@@ -2,13 +2,14 @@ import { assert } from '@std/assert/assert'
 import type { AppOptions, ShortkeyConfig } from './types.ts'
 import { comboToPretty } from './shortkeys.ts'
 
-export type FlagName = 'use-regex' | 'match-case' | 'whole-word'
+export type FlagName = 'useRegex' | 'matchCase' | 'wholeWord' | 'normalizeDiacritics'
 
 export function setFlagDefaults(form: HTMLFormElement, options: AppOptions) {
 	const defaults: Record<FlagName, boolean> = {
-		'use-regex': options['defaults.useRegex'],
-		'match-case': options['defaults.matchCase'],
-		'whole-word': options['defaults.wholeWord'],
+		'useRegex': options['defaults.useRegex'],
+		'matchCase': options['defaults.matchCase'],
+		'wholeWord': options['defaults.wholeWord'],
+		'normalizeDiacritics': options['defaults.normalizeDiacritics'],
 	}
 
 	for (const [k, v] of Object.entries(defaults)) {
@@ -19,10 +20,11 @@ export function setFlagDefaults(form: HTMLFormElement, options: AppOptions) {
 }
 
 export function getFlags(form: HTMLFormElement) {
-	const regexSyntax = isSet(form, 'use-regex')
-	const matchCase = isSet(form, 'match-case')
-	const wholeWord = isSet(form, 'whole-word')
-	return { regexSyntax, matchCase, wholeWord }
+	const regexSyntax = isSet(form, 'useRegex')
+	const matchCase = isSet(form, 'matchCase')
+	const wholeWord = isSet(form, 'wholeWord')
+	const normalizeDiacritics = isSet(form, 'normalizeDiacritics')
+	return { regexSyntax, matchCase, wholeWord, normalizeDiacritics }
 }
 
 function isSet(form: HTMLFormElement, name: FlagName) {
@@ -33,9 +35,10 @@ function isSet(form: HTMLFormElement, name: FlagName) {
 
 export function updateShortkeyHints(form: HTMLFormElement, shortkeys: ShortkeyConfig, showHint: boolean) {
 	const s: Record<FlagName, ShortkeyConfig[keyof ShortkeyConfig]> = {
-		'use-regex': shortkeys.useRegex,
-		'match-case': shortkeys.matchCase,
-		'whole-word': shortkeys.wholeWord,
+		'useRegex': shortkeys.useRegex,
+		'matchCase': shortkeys.matchCase,
+		'wholeWord': shortkeys.wholeWord,
+		'normalizeDiacritics': shortkeys.normalizeDiacritics,
 	}
 
 	for (const [k, v] of Object.entries(s)) {

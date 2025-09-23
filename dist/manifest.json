@@ -12,21 +12,9 @@
 		"open": {
 			"suggested_key": {
 				"default": "Ctrl+Shift+F",
-				"mac": "Command+Shift+Y"
+				"mac": "Command+Shift+F"
 			},
 			"description": "Open the Find++ search box"
-		},
-		"matchCase": {
-			"suggested_key": "Alt+C",
-			"description": "Match case-sensitively"
-		},
-		"wholeWord": {
-			"suggested_key": "Alt+W",
-			"description": "Only match whole words"
-		},
-		"useRegex": {
-			"suggested_key": "Alt+R",
-			"description": "Use regular expression syntax"
 		}
 	},
 	"content_scripts": [
@@ -40,7 +28,7 @@
 		{
 			"resources": [
 				"/main.js",
-				"/template.html",
+				"/search-box.html",
 				"/common.css",
 				"/search-box.css",
 				"/worker-runner.html",

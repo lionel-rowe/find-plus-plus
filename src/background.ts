@@ -50,7 +50,10 @@ chrome.action.onClicked.addListener(async (tab) => {
 })
 
 async function getShortkeys() {
-	const commands = await chrome.commands.getAll()
+	const commands: chrome.commands.Command[] = [
+		...await chrome.commands.getAll(),
+	]
+
 	return Object.fromEntries(
 		commands.map(({ name, shortcut, description }) => [name, { combo: shortcut, description }]),
 	) as ShortkeyConfig

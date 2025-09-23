@@ -37,7 +37,6 @@ async function handle(message: Message) {
 		}
 		case 'optionsUpdated': {
 			const options = await optionsStorage.get(defaultOptions)
-			// TODO: update options every time they're changed, not just on init
 			document.dispatchEvent(new UpdateOptionsEvent({ options }))
 
 			break
