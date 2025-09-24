@@ -2,13 +2,17 @@ import { CUSTOM_ELEMENT_NAME, WORKER_RUNNER_ID } from './config.ts'
 import { assert } from '@std/assert/assert'
 
 export function getElements() {
-	const container = window.document.querySelector(CUSTOM_ELEMENT_NAME)
+	const container = document.querySelector(CUSTOM_ELEMENT_NAME)
 	assert(container instanceof HTMLElement)
-	const document = container.shadowRoot
-	assert(document != null)
-	const textareaOuter = document.querySelector('.textarea')
+	const workerRunner = document.getElementById(WORKER_RUNNER_ID)
+	assert(workerRunner instanceof HTMLIFrameElement)
+
+	const { shadowRoot } = container
+	assert(shadowRoot != null)
+
+	const textareaOuter = shadowRoot.querySelector('.textarea')
 	assert(textareaOuter instanceof HTMLElement)
-	const ce = document.querySelector('[contenteditable]')
+	const ce = shadowRoot.querySelector('[contenteditable]')
 	assert(ce instanceof HTMLElement)
 	const textarea = Object.defineProperty(
 		Object.assign(ce, { value: '' }),
@@ -22,21 +26,18 @@ export function getElements() {
 			},
 		},
 	)
-	const info = document.querySelector('.info')
+	const info = shadowRoot.querySelector('.info')
 	assert(info instanceof HTMLElement)
-	const infoMessage = document.querySelector('.info-message')
+	const infoMessage = shadowRoot.querySelector('.info-message')
 	assert(infoMessage instanceof HTMLElement)
-	const flags = document.querySelector('.flags')
+	const flags = shadowRoot.querySelector('.flags')
 	assert(flags instanceof HTMLFormElement)
 
-	const closeButton = document.querySelector('.close-button')
+	const closeButton = shadowRoot.querySelector('.close-button')
 	assert(closeButton instanceof HTMLElement)
 
-	const optionsButton = document.querySelector('.options-button')
+	const optionsButton = shadowRoot.querySelector('.options-button')
 	assert(optionsButton instanceof HTMLElement)
-
-	const workerRunner = window.document.getElementById(WORKER_RUNNER_ID)
-	assert(workerRunner instanceof HTMLIFrameElement)
 
 	return { container, workerRunner, textarea, textareaOuter, info, infoMessage, flags, optionsButton, closeButton }
 }

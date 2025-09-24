@@ -3,13 +3,6 @@
 	<head>
 		<meta charset="UTF-8">
 		<title>Find++ Options</title>
-		<style>
-			#form {
-				& > * {
-					margin-block: 1rem;
-				}
-			}
-		</style>
 		<link rel="stylesheet" href="options.css">
 	</head>
 
@@ -17,14 +10,14 @@
 		<h1>Find++ Options</h1>
 
 		<form id="form">
-			<div>
-				<h2>Defaults</h2>
-				<p>These options will be used by default when you open the Find++ dialog.</p>
+			<fieldset>
+				<legend>Defaults</legend>
+				<p><small>These options will be used by default when you open the Find++ dialog.</small></p>
 				<div id="default-flags-container"></div>
-			</div>
+			</fieldset>
 
-			<div>
-				<h2>Colors</h2>
+			<fieldset>
+				<legend>Colors</legend>
 				<div class="fields inline">
 					<label class="label" for="colors.all">All <input
 							type="color"
@@ -45,10 +38,10 @@
 							name="colors.text"
 						></label>
 				</div>
-			</div>
+			</fieldset>
 
-			<div>
-				<h2>Performance</h2>
+			<fieldset>
+				<legend>Performance</legend>
 
 				<div class="fields">
 					<div>
@@ -68,7 +61,7 @@
 								seconds
 							</span>
 						</div>
-						<div>
+						<div class="details">
 							<small id="max-timeout-hint">
 								The maximum amount of time to attempt to find matches.
 							</small>
@@ -87,26 +80,71 @@
 							>
 						</label>
 
-						<div>
+						<div class="details">
 							<small id="max-matches-hint">
 								Limit the maximum number of matches to find (smaller = faster performance).
 							</small>
 						</div>
 					</div>
 				</div>
-			</div>
+			</fieldset>
 
-			<div id="status"></div>
+			<fieldset>
+				<legend>Keyboard Shortcuts</legend>
 
-			<div>
-				<h2>Keyboard Shortcuts</h2>
-				<p><a href="chrome://extensions/shortcuts" target="_blank">Edit keyboard shortcuts</a></p>
-			</div>
+				<div class="fields" id="shortkey-fields">
+					<div>
+						<label class="label" for="shortkeys._execute_action">
+							Open
+							<input disabled id="shortkeys._execute_action" name="shortkeys._execute_action">
+							<a id="shortkeys._execute_action" href="chrome://extensions/shortcuts" target="_blank"
+							>Configure</a>
+						</label>
+					</div>
+
+					<div>
+						<label class="label" for="shortkeys.matchCase">
+							Match case
+							<input id="shortkeys.matchCase" name="shortkeys.matchCase">
+						</label>
+					</div>
+
+					<div>
+						<label class="label" for="shortkeys.wholeWord">
+							Whole word
+							<input id="shortkeys.wholeWord" name="shortkeys.wholeWord">
+						</label>
+					</div>
+
+					<div>
+						<label class="label" for="shortkeys.useRegex">
+							Enable regex syntax
+							<input id="shortkeys.useRegex" name="shortkeys.useRegex">
+						</label>
+					</div>
+
+					<div>
+						<label class="label" for="shortkeys.normalizeDiacritics">
+							Normalize diacritics
+							<input id="shortkeys.normalizeDiacritics" name="shortkeys.normalizeDiacritics">
+						</label>
+					</div>
+
+					<div>
+						<label class="label" for="shortkeys.close">
+							Close
+							<input id="shortkeys.close" name="shortkeys.close">
+						</label>
+					</div>
+				</div>
+			</fieldset>
 
 			<div>
 				<button type="submit">💾 Save</button>
 				<button type="reset">Reset All</button>
 			</div>
+
+			<div id="status"></div>
 		</form>
 
 		<script type="module" src="options.js"></script>

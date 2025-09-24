@@ -1,38 +1,43 @@
 import '@types/chrome'
 
+type ShortkeyConfig = {
+	shortkey: string
+	name: string
+	description: string
+}
+
+type Flag = 'matchCase' | 'wholeWord' | 'useRegex' | 'normalizeDiacritics'
+type Action = 'close'
+
+type FlagConfig = {
+	default: boolean
+} & ShortkeyConfig
+
 export type AppOptions = {
 	maxTimeout: number
 	maxMatches: number
 
-	'defaults.matchCase': boolean
-	'defaults.wholeWord': boolean
-	'defaults.useRegex': boolean
-	'defaults.normalizeDiacritics': boolean
+	flags: Record<Flag, FlagConfig>
 
-	'shortkeys.matchCase': string
-	'shortkeys.wholeWord': string
-	'shortkeys.useRegex': string
-	'shortkeys.normalizeDiacritics': string
+	actions: Record<Action, ShortkeyConfig>
 
-	'colors.all': string
-	'colors.current': string
-	'colors.text': string
+	colors: {
+		all: string
+		current: string
+		text: string
+	}
 }
 
 export type Command = keyof typeof import('../dist/manifest.json', { with: { type: 'json' }})['commands']
-export type ShortKey = Command | 'matchCase' | 'wholeWord' | 'useRegex' | 'normalizeDiacritics'
+export type ShortKey = Command | Flag
 
 type CommandMessage = {
 	kind: 'command'
 	command: Command
-	shortkeys: ShortkeyConfig
 }
 type OptionsUpdatedMessage = {
 	kind: 'optionsUpdated'
 }
 
 export type Message = CommandMessage | OptionsUpdatedMessage
-export type ShortkeyConfig = Record<Exclude<ShortKey, Command>, {
-	combo: string
-	description: string
-}>
+export type ShortkeyConfigMapping = Record<Exclude<ShortKey, Command>, ShortkeyConfig>

@@ -1,4 +1,4 @@
-import type { AppOptions, Command, ShortkeyConfig } from './types.ts'
+import type { AppOptions, Command } from './types.ts'
 import { namespaced } from './config.ts'
 
 abstract class AppEvent<D = undefined> extends CustomEvent<D> {

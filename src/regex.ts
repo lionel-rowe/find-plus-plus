@@ -2,7 +2,7 @@ import { assert } from '@std/assert/assert'
 import { Normalization } from './worker.ts'
 
 export type Flags = {
-	regexSyntax: boolean
+	useRegex: boolean
 	matchCase: boolean
 	wholeWord: boolean
 	normalizeDiacritics: boolean
@@ -55,7 +55,7 @@ function getWordBoundary({ wordChar, nonSpace }: WordDelimiters) {
 
 type RegexSourceOnlyResult = {
 	kind: 'sourceOnly'
-	usesRegexSyntax: boolean
+	useRegex: boolean
 	regex: RegExp
 	empty: boolean
 	normalizations: Normalization[]
@@ -87,7 +87,7 @@ export function searchTermToRegexResult(searchTerm: string, flagValues: Flags): 
 
 			return {
 				kind: 'sourceOnly',
-				usesRegexSyntax: flagValues.regexSyntax,
+				useRegex: flagValues.useRegex,
 				regex,
 				empty: regex.source === EMPTY_REGEX_SOURCE,
 				normalizations,
@@ -120,7 +120,7 @@ export function searchTermToRegexResult(searchTerm: string, flagValues: Flags): 
 function getRegexOrThrow(source: string, flagValues: Flags) {
 	let firstError: SyntaxError
 
-	if (!flagValues.regexSyntax) {
+	if (!flagValues.useRegex) {
 		source = RegExp.escape(source)
 	}
 

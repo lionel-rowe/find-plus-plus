@@ -31,24 +31,34 @@ export const defaultOptions: AppOptions = {
 	maxTimeout: 5000, // 5 seconds
 	maxMatches: 500,
 
-	'defaults.matchCase': false,
-	'defaults.wholeWord': false,
-	'defaults.useRegex': true,
-	'defaults.normalizeDiacritics': false,
+	flags: {
+		matchCase: { default: false, shortkey: 'Alt+C', description: 'Match case-sensitively', name: 'Match case' },
+		wholeWord: { default: false, shortkey: 'Alt+W', description: 'Only match whole words', name: 'Whole word' },
+		useRegex: {
+			default: true,
+			shortkey: 'Alt+R',
+			description: 'Use regular expression syntax',
+			name: 'Use regular expressions',
+		},
+		normalizeDiacritics: {
+			default: false,
+			shortkey: 'Alt+D',
+			description: 'Normalize diacritics (e.g. é -> e)',
+			name: 'Normalize diacritics',
+		},
+	},
 
-	// // TODO:
-	// // 1. Flatten options config
-	// // 2. Make configurable again via options page (not via manifest.json, as max 4 commands allowed there)
-	// { name: 'matchCase', shortcut: 'Alt+C', description: 'Match case-sensitively' },
-	// { name: 'wholeWord', shortcut: 'Alt+W', description: 'Only match whole words' },
-	// { name: 'useRegex', shortcut: 'Alt+R', description: 'Use regular expression syntax' },
-	// { name: 'normalizeDiacritics', shortcut: 'Alt+D', description: 'Normalize diacritics (e.g. é -> e)' },
-	'shortkeys.matchCase': 'Alt+C',
-	'shortkeys.wholeWord': 'Alt+W',
-	'shortkeys.useRegex': 'Alt+R',
-	'shortkeys.normalizeDiacritics': 'Alt+D',
+	actions: {
+		close: {
+			shortkey: 'Escape',
+			name: 'Close',
+			description: 'Close the Find++ search box',
+		},
+	},
 
-	'colors.all': '#ffff00', // yellow
-	'colors.current': '#ff8c00', // darkorange
-	'colors.text': '#000000', // black
+	colors: {
+		all: '#ffff00', // CSS named color "yellow"
+		current: '#ff8c00', // CSS named color "darkorange"
+		text: '#000000', // CSS named color "black"
+	},
 }

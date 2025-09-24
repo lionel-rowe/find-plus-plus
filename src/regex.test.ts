@@ -1,3 +1,4 @@
+import './types.d.ts'
 import { assert, assertEquals, assertMatch, assertNotMatch } from '@std/assert'
 import { searchTermToRegexResult } from './regex.ts'
 import type { Flags, RegexConfig } from './regex.ts'
@@ -11,38 +12,53 @@ const cases: {
 }[] = [
 	{
 		searchTerm: 'abc',
-		flagValues: { regexSyntax: false, matchCase: false, wholeWord: false },
-		result: { kind: 'sourceOnly', regex: /\x61bc/gimv, usesRegexSyntax: false, empty: false },
+		flagValues: { useRegex: false, matchCase: false, wholeWord: false, normalizeDiacritics: false },
+		result: { kind: 'sourceOnly', regex: /\x61bc/gimv, useRegex: false, empty: false, normalizations: [] },
 		match: ['abc', 'ABC', 'abcd'],
 		noMatch: ['ab', 'ab c', 'a bc'],
 	},
 	{
 		searchTerm: '/abc/ui',
-		flagValues: { regexSyntax: false, matchCase: true, wholeWord: true },
-		result: { kind: 'full', regex: /abc/giu, empty: false },
+		flagValues: { useRegex: false, matchCase: true, wholeWord: true, normalizeDiacritics: false },
+		result: { kind: 'full', regex: /abc/giu, empty: false, normalizations: [] },
 		match: ['abc', 'ABC', 'abcd'],
 		noMatch: ['ab', 'ab c', 'a bc'],
 	},
 	{
 		searchTerm: '',
-		flagValues: { regexSyntax: false, matchCase: false, wholeWord: false },
-		result: { kind: 'sourceOnly', regex: /(?:)/gimv, usesRegexSyntax: false, empty: true },
+		flagValues: { useRegex: false, matchCase: false, wholeWord: false, normalizeDiacritics: false },
+		result: { kind: 'sourceOnly', regex: /(?:)/gimv, useRegex: false, empty: true, normalizations: [] },
 	},
 	{
 		searchTerm: '\\',
-		flagValues: { regexSyntax: true, matchCase: false, wholeWord: false },
-		result: { kind: 'error', error: new SyntaxError('Invalid regular expression: /\\/v: \\ at end of pattern') },
+		flagValues: { useRegex: true, matchCase: false, wholeWord: false, normalizeDiacritics: false },
+		result: {
+			kind: 'error',
+			error: new SyntaxError('Invalid regular expression: /\\/v: \\ at end of pattern'),
+			normalizations: [],
+		},
 	},
 	{
 		searchTerm: '\\',
-		flagValues: { regexSyntax: false, matchCase: false, wholeWord: false },
-		result: { kind: 'sourceOnly', regex: /\\/gimv, usesRegexSyntax: false, empty: false },
+		flagValues: { useRegex: false, matchCase: false, wholeWord: false, normalizeDiacritics: false },
+		result: { kind: 'sourceOnly', regex: /\\/gimv, useRegex: false, empty: false, normalizations: [] },
+	},
+	{
+		searchTerm: '_',
+		flagValues: { useRegex: false, matchCase: false, wholeWord: false, normalizeDiacritics: true },
+		result: {
+			kind: 'sourceOnly',
+			regex: /_/gimv,
+			useRegex: false,
+			empty: false,
+			normalizations: ['diacritics'],
+		},
 	},
 ]
 
 Deno.test(searchTermToRegexResult.name, async (t) => {
 	for (const { searchTerm, flagValues, result, match, noMatch } of cases) {
-		const _desc = Deno.inspect([searchTerm, flagValues], { colors: true })
+		const _desc = Deno.inspect([searchTerm, flagValues], { colors: true, breakLength: Infinity })
 		const description = _desc.slice(_desc.indexOf('[') + 1, _desc.lastIndexOf(']')).trim()
 
 		await t.step(description, () => {

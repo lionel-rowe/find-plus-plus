@@ -1,3 +1,4 @@
+import './types.d.ts'
 import { assert, assertEquals } from '@std/assert'
 import { comboToPretty, eventMatchesCombo, eventToCombo, type KbdEvent, platform } from './shortkeys.ts'
 import { stubProperty } from '@std/testing/unstable-stub-property'

@@ -1,4 +1,4 @@
-import type { Command, Message, ShortkeyConfig } from './types.ts'
+import type { Message } from './types.ts'
 
 // const IS_DEV_MODE = !Object.hasOwn(chrome.runtime.getManifest(), 'update_url')
 // if (IS_DEV_MODE) {
@@ -11,16 +11,6 @@ import type { Command, Message, ShortkeyConfig } from './types.ts'
 // }
 
 const openTabIds = new Set<number>()
-
-chrome.commands.onCommand.addListener(async (_command, tab) => {
-	const command = _command as Command
-	if (tab?.id == null) return
-	openTabIds.add(tab.id)
-	const shortkeys = await getShortkeys()
-	const message: Message = { kind: 'command', command, shortkeys }
-
-	chrome.tabs.sendMessage(tab.id, message)
-})
 
 chrome.runtime.onMessage.addListener(async (request) => {
 	switch (request) {
@@ -42,19 +32,10 @@ chrome.runtime.onMessage.addListener(async (request) => {
 	}
 })
 
-chrome.action.onClicked.addListener(async (tab) => {
+// `onClicked` also fires when `_execute_action` shortcut key (default Ctrl+Shift+F) is pressed
+chrome.action.onClicked.addListener((tab) => {
 	if (tab?.id == null) return
-	const shortkeys = await getShortkeys()
-	const message: Message = { kind: 'command', command: 'open', shortkeys }
+	openTabIds.add(tab.id)
+	const message: Message = { kind: 'command', command: '_execute_action' }
 	chrome.tabs.sendMessage(tab.id, message)
 })
-
-async function getShortkeys() {
-	const commands: chrome.commands.Command[] = [
-		...await chrome.commands.getAll(),
-	]
-
-	return Object.fromEntries(
-		commands.map(({ name, shortcut, description }) => [name, { combo: shortcut, description }]),
-	) as ShortkeyConfig
-}

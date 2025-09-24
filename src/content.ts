@@ -1,5 +1,5 @@
 import * as CONFIG from './config.ts'
-import { CloseEvent, CommandEvent, NotifyReadyEvent, OpenOptionsPageEvent, UpdateOptionsEvent } from './events.ts'
+import { CommandEvent, NotifyReadyEvent, OpenOptionsPageEvent, UpdateOptionsEvent } from './events.ts'
 import { optionsStorage } from './storage.ts'
 import type { Message } from './types.ts'
 import { getHtml } from './populateTemplate.ts'
@@ -15,11 +15,11 @@ const ready = Object.assign(Promise.withResolvers<void>(), { initialized: false,
 chrome.runtime.onMessage.addListener(handle)
 
 async function handle(message: Message) {
-	if (!ready.finalized && (message.kind !== 'command' || message.command !== 'open')) return
+	if (!ready.finalized && (message.kind !== 'command' || message.command !== '_execute_action')) return
 
 	switch (message.kind) {
 		case 'command': {
-			if (!ready.initialized && message.command === 'open') {
+			if (!ready.initialized && message.command === '_execute_action') {
 				// set true before awaiting anything to ensure `initialize` only run once
 				ready.initialized = true
 
@@ -43,15 +43,6 @@ async function handle(message: Message) {
 		}
 	}
 }
-
-// plain `Escape` can't be handled by `chrome.commands` as commands must include Ctrl or Alt
-document.addEventListener('keydown', (e) => {
-	if (!ready.finalized) return
-
-	if (e.key === 'Escape') {
-		document.dispatchEvent(new CloseEvent())
-	}
-})
 
 async function initialize(root: Element, html: string) {
 	root.insertAdjacentHTML('beforeend', html)

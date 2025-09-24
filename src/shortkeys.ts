@@ -26,7 +26,22 @@ export type KbdEvent = {
 	key: string
 } & Partial<Record<typeof eventModifiers[keyof typeof eventModifiers], boolean>>
 
-function capitalize(s: string) {
+const capitalizations = new Map([
+	'ArrowRight',
+	'ArrowLeft',
+	'ArrowUp',
+	'ArrowDown',
+	'PageUp',
+	'PageDown',
+	'CapsLock',
+	'NumLock',
+	'ScrollLock',
+	'PrintScreen',
+].map((x) => [x.toLowerCase(), x]))
+
+function recapitalize(s: string) {
+	const cased = capitalizations.get(s.toLowerCase())
+	if (cased != null) return cased
 	return s.charAt(0).toUpperCase() + s.slice(1).toLowerCase()
 }
 
@@ -34,7 +49,7 @@ function capitalize(s: string) {
 const bareEventModifiers = ['ctrl', 'alt', 'shift', 'meta'] as const
 const eventModifiers = Object.fromEntries(bareEventModifiers.map((k) => [k, `${k}Key` as const]))
 const normalizedEventModifiers = bareEventModifiers.map((k) => {
-	const x = capitalize(k)
+	const x = recapitalize(k)
 	return normalized.get(x) ?? x
 })
 
@@ -51,7 +66,7 @@ function normalizeCombo(combo: string) {
 	const parts = [
 		...new Set(
 			combo.split(PLUS_SPLITTER).map((x) => {
-				x = capitalize(x)
+				x = recapitalize(x)
 				return normalized.get(x) ?? x
 			}),
 		),
@@ -70,9 +85,9 @@ function normalizeCombo(combo: string) {
 	return parts.join('+')
 }
 
-export function eventMatchesCombo(e: KbdEvent, combo: string) {
+export function eventMatchesCombo<T extends [string, ...string[]]>(e: KbdEvent, ...combos: T): T[number] | null {
 	const eventCombo = eventToCombo(e)
-	return eventCombo && (eventCombo === normalizeCombo(combo))
+	return combos.find((combo) => eventCombo === normalizeCombo(combo)) ?? null
 }
 
 function keyToPretty(key: string) {
@@ -87,7 +102,7 @@ function keyToPretty(key: string) {
 		['Meta', platform.isApple ? '⌘' : '⊞'], // mac = "command" key; windows = "windows" key
 	])
 
-	return prettyFmtMap.get(key) ?? (key.length === 1 ? key.toUpperCase() : key)
+	return prettyFmtMap.get(recapitalize(key)) ?? (key.length === 1 ? key.toUpperCase() : key)
 }
 
 export function comboToPretty(combo: string) {
@@ -98,7 +113,9 @@ export function comboToPretty(combo: string) {
 }
 
 export function comboToPrettyHtml(combo: string) {
-	return combo.split(PLUS_SPLITTER).map((x) => `<kbd>${escapeHtml(keyToPretty(x))}</kbd>`).join('<span>+</span>')
+	return `<kbd>${
+		combo.split(PLUS_SPLITTER).map((x) => `<kbd>${escapeHtml(keyToPretty(x))}</kbd>`).join('<span>+</span>')
+	}</kbd>`
 }
 
 export function eventToCombo(e: KbdEvent) {

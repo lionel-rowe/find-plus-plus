@@ -37,16 +37,8 @@ import { normalizersFor } from './normalizers.ts'
 
 let options = defaultOptions
 
-type ShortKey = Command | 'matchCase' | 'wholeWord' | 'useRegex' | 'normalizeDiacritics'
-
-const shortKeyMap: Record<ShortKey, (e: CommandEvent) => void> = {
-	// "hard" shortkey i.e. native command
-	open,
-	// "soft" shortkeys
-	matchCase: toggleFlag('matchCase'),
-	wholeWord: toggleFlag('wholeWord'),
-	useRegex: toggleFlag('useRegex'),
-	normalizeDiacritics: toggleFlag('normalizeDiacritics'),
+const shortKeyMap: Record<Command, (e: CommandEvent) => void> = {
+	_execute_action: open,
 }
 
 document.addEventListener(CommandEvent.TYPE, (e) => {
@@ -57,20 +49,14 @@ document.addEventListener(CommandEvent.TYPE, (e) => {
 document.addEventListener(UpdateOptionsEvent.TYPE, (e) => {
 	assert(e instanceof UpdateOptionsEvent)
 
-	const shortkeys = {
-		matchCase: { combo: options['shortkeys.matchCase'], description: 'Match Case' },
-		wholeWord: { combo: options['shortkeys.wholeWord'], description: 'Whole Word' },
-		useRegex: { combo: options['shortkeys.useRegex'], description: 'Use Regex' },
-		normalizeDiacritics: { combo: options['shortkeys.normalizeDiacritics'], description: 'Normalize Diacritics' },
-	}
-
-	updateShortkeyHints(elements.flags, shortkeys, true)
-
 	if (options === defaultOptions) {
 		// only on first load (i.e. if options still reference-equal to defaultOptions)
 		setFlagDefaults(elements.flags, e.detail.options)
 	}
+
 	options = e.detail.options
+	updateShortkeyHints(elements.flags, options.flags, true)
+
 	setColors(e.detail.options)
 })
 
@@ -79,9 +65,9 @@ document.adoptedStyleSheets.push(highlightStyles)
 
 function setColors(options: AppOptions) {
 	const styleMapping = Object.entries({
-		[HIGHLIGHT_ALL_ID]: options['colors.all'],
-		[HIGHLIGHT_CURRENT_ID]: options['colors.current'],
-		[HIGHLIGHT_TEXT_ID]: options['colors.text'],
+		[HIGHLIGHT_ALL_ID]: options.colors.all,
+		[HIGHLIGHT_CURRENT_ID]: options.colors.current,
+		[HIGHLIGHT_TEXT_ID]: options.colors.text,
 	})
 
 	highlightStyles.replaceSync(`:root {${styleMapping.map(([id, color]) => `--${id}: ${color};`).join('')}}`)
@@ -281,6 +267,29 @@ const cssLoaded = Promise.all(
 // delegate focus to input
 elements.textareaOuter.addEventListener('click', () => elements.textarea.focus())
 
+function keydownWhileOpenHandler(e: KeyboardEvent) {
+	const shortkeyConfig = (['close', 'matchCase', 'wholeWord', 'useRegex', 'normalizeDiacritics'] as const)
+		.map((name) => ({
+			name,
+			shortkey: name === 'close' ? options.actions.close.shortkey : options.flags[name].shortkey,
+		}))
+
+	const matched = eventMatchesCombo(e, ...shortkeyConfig.map(({ shortkey }) => shortkey) as [string])
+
+	if (matched == null) return
+
+	e.preventDefault()
+	e.stopPropagation()
+
+	const { name } = shortkeyConfig.find(({ shortkey }) => shortkey === matched)!
+
+	if (name === 'close') {
+		close()
+	} else {
+		toggleFlag(name)()
+	}
+}
+
 async function open(_e: CommandEvent) {
 	await cssLoaded
 
@@ -288,6 +297,8 @@ async function open(_e: CommandEvent) {
 	elements.textarea.focus()
 	elements.textarea.dispatchEvent(new Event('input'))
 	isOpen = true
+
+	globalThis.addEventListener('keydown', keydownWhileOpenHandler)
 }
 
 function close() {
@@ -295,6 +306,7 @@ function close() {
 	CSS.highlights.delete(HIGHLIGHT_ALL_ID)
 	CSS.highlights.delete(HIGHLIGHT_CURRENT_ID)
 	isOpen = false
+	globalThis.removeEventListener('keydown', keydownWhileOpenHandler)
 }
 
 elements.textarea.addEventListener('keydown', (e) => {
@@ -312,17 +324,18 @@ elements.textarea.addEventListener('keydown', (e) => {
 			const inc = e.shiftKey ? -1 : 1
 			setRangeIndex((n) => n + inc)
 		}
-	} else if (eventMatchesCombo(e, 'Ctrl+A')) {
-		// prevent "select all" from propagating to other page elements (e.g. on GitHub)
-		e.stopPropagation()
 	} else {
-		for (const name of ['matchCase', 'wholeWord', 'useRegex', 'normalizeDiacritics'] as const) {
-			if (eventMatchesCombo(e, options[`shortkeys.${name}`])) {
-				toggleFlag(name)()
-				e.preventDefault()
-				e.stopPropagation()
-				break
+		const matched = eventMatchesCombo(e, 'Ctrl+A')
+
+		if (matched != null) {
+			switch (matched) {
+				case 'Ctrl+A': {
+					e.stopPropagation()
+					// prevent "select all" from propagating to other page elements (e.g. on GitHub)
+					break
+				}
 			}
+			return
 		}
 	}
 })
@@ -423,7 +436,7 @@ async function _updateSearch() {
 	const source = elements.textarea.value
 	const result = searchTermToRegexResult(source, getFlags(elements.flags))
 
-	const isRegex = result.kind === 'full' || result.kind === 'error' || result.usesRegexSyntax
+	const isRegex = result.kind === 'full' || result.kind === 'error' || result.useRegex
 
 	elements.textarea.classList.toggle('code', isRegex)
 	elements.textarea.classList.toggle('prose', !isRegex)
