@@ -1,5 +1,11 @@
 import * as CONFIG from './config.ts'
-import { CommandEvent, NotifyReadyEvent, OpenOptionsPageEvent, UpdateOptionsEvent } from './events.ts'
+import {
+	CommandEvent,
+	NotifyReadyEvent,
+	OpenOptionsPageEvent,
+	PuppeteerTestEvent,
+	UpdateOptionsEvent,
+} from './events.ts'
 import { optionsStorage } from './storage.ts'
 import type { Message } from './types.ts'
 import { getHtml } from './populateTemplate.ts'
@@ -12,9 +18,27 @@ const { CUSTOM_ELEMENT_NAME } = ids
 
 const ready = Object.assign(Promise.withResolvers<void>(), { initialized: false, finalized: false })
 
-chrome.runtime.onMessage.addListener(handle)
+const isIframe = window !== window.top
 
-async function handle(message: Message) {
+if (isIframe) {
+	setupIframe()
+} else {
+	setupMain()
+}
+
+function setupMain() {
+	chrome.runtime.onMessage.addListener(handleMessage)
+	document.addEventListener(OpenOptionsPageEvent.TYPE, (e) => {
+		assert(e instanceof OpenOptionsPageEvent)
+		chrome.runtime.sendMessage('showOptions')
+	})
+}
+
+function setupIframe() {
+	// TODO: setup iframe logic
+}
+
+async function handleMessage(message: Message) {
 	if (!ready.finalized && (message.kind !== 'command' || message.command !== '_execute_action')) return
 
 	switch (message.kind) {
@@ -73,8 +97,3 @@ async function initialize(root: Element, html: string) {
 
 	document.dispatchEvent(new UpdateOptionsEvent({ options }))
 }
-
-document.addEventListener(OpenOptionsPageEvent.TYPE, (e) => {
-	assert(e instanceof OpenOptionsPageEvent)
-	chrome.runtime.sendMessage('showOptions')
-})

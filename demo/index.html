@@ -22,16 +22,78 @@
 	<body>
 		<h1>Find++ Demo</h1>
 		<div class="content">
-			<p>
-				This is a sample paragraph to demonstrate the Find++ functionality. You can search for words like
-				"sample", "Find++", or any other text present in this content area.
-			</p>
-			<p>Try searching for "text", "search", or "highlight".</p>
-			<p>NFC: Các chương trình<br>NFD: Các chương trình</p>
+			<section>
+				<p>
+					This is a sample paragraph to demonstrate the Find++ functionality. You can search for words like
+					"sample", "Find++", or any other text present in this content area.
+				</p>
+				<p>Try searching for "text", "search", or "highlight".</p>
+				<p>NFC: Các chương trình<br>NFD: Các chương trình</p>
+				<textarea name="" id="">abc</textarea>
+				<input type="text" value="def">
+			</section>
 			<!-- deno-fmt-ignore -->
-			<div style="display: flex; gap: 1em">
-				<div>flex item</div><div>flex item 2</div>
-			</div>
+			<section>
+				<h2>White space</h2>
+				<p>one <span>two
+					</span> three<br>four
+				</p>
+				<div style="display: flex; gap: 1em">
+					<div>flex item</div><div>flex item 2</div>
+				</div>
+				<table>
+					<tr>
+						<td>table cell 1</td>
+						<td>table cell 2</td>
+					</tr>
+				</table>
+			</section>
+			<section>
+				<h2>Shadow DOM Example</h2>
+				<div>
+					<div id="foo">light dom</div>
+					<custom-el><span slot="slot">shadow dom</span></custom-el>
+				</div>
+				<script>
+					customElements.define(
+						'custom-el',
+						class extends HTMLElement {
+							constructor() {
+								super()
+								this.attachShadow({ mode: 'open' }).append(Object.assign(
+									document.createElement('div'),
+									{ innerHTML: '<slot name="slot"></slot>' },
+								))
+							}
+						},
+					)
+				</script>
+			</section>
+			<section>
+				<h2>Iframe Example</h2>
+				<iframe
+					src="iframe.html"
+					style="width: 100%; height: 200px; border: 1px solid #ccc"
+					title="Find++ Iframe Demo"
+				></iframe>
+			</section>
+			<section>
+				<h2>hidden elements</h2>
+				<p>This paragraph should be searchable0.</p>
+				<p style="display: none">This paragraph is hidden and should not be searchable1.</p>
+				<p style="visibility: hidden">This paragraph is invisible and should not be searchable2.</p>
+				<p style="opacity: 0">This paragraph is fully transparent and should not be searchable3.</p>
+				<p style="height: 0; overflow: hidden">This paragraph has no height and should not be searchable4.</p>
+				<p style="position: absolute; left: -9999px">
+					This paragraph is positioned off-screen and should not be searchable5.
+				</p>
+				<p style="width: 0; overflow: hidden">This paragraph has no width and should not be searchable6.</p>
+				<p style="clip: rect(0, 0, 0, 0); position: absolute">
+					This paragraph is clipped and should not be searchable7.
+				</p>
+				<p style="transform: scale(0)">This paragraph is scaled to zero and should not be searchable8.</p>
+				<p style="font-size: 0">This paragraph has zero font size and should not be searchable9.</p>
+			</section>
 		</div>
 	</body>
 </html>
