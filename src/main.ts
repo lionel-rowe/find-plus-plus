@@ -168,6 +168,7 @@ async function getRangesOrError(
 	const ranges: Range[] = []
 
 	const walker = new TextNodeOffsetWalker(element)
+	const adjust = relativeTo(document.documentElement.getBoundingClientRect())
 
 	try {
 		let i = 0
@@ -183,8 +184,7 @@ async function getRangesOrError(
 			const range = new Range()
 			range.setStart(...start)
 			range.setEnd(...end)
-
-			if (filter(range, m)) {
+			if (filter(range, m, adjust)) {
 				ranges.push(range)
 				if (++i === options.maxMatches) break
 			}
@@ -209,6 +209,7 @@ function getRangesSync(
 	const ranges: Range[] = []
 
 	const walker = new TextNodeOffsetWalker(element)
+	const adjust = relativeTo(document.documentElement.getBoundingClientRect())
 
 	if (normalizations.length) {
 		regex = new NormalizedMatcher({
@@ -226,7 +227,7 @@ function getRangesSync(
 		range.setStart(...start)
 		range.setEnd(...end)
 
-		if (filter(range, m)) {
+		if (filter(range, m, adjust)) {
 			ranges.push(range)
 			if (++i === options.maxMatches) break
 		}
@@ -246,10 +247,49 @@ const IGNORED_ELEMENT_SELECTOR = [
 	'input',
 ].join(', ')
 
-function filter(range: Range, text: string) {
-	const element = getElementAncestor(range.commonAncestorContainer)
+function filter(range: Range, text: string, adjust: RectAdjuster): boolean {
+	const el = getElementAncestor(range.commonAncestorContainer)
 	if (!/\S/.test(text)) return false
-	return !element.matches(IGNORED_ELEMENT_SELECTOR) && element.checkVisibility()
+	return !el.matches(IGNORED_ELEMENT_SELECTOR) && checkVisibility(el, adjust)
+}
+
+type RectAdjuster = (rect: DOMRectReadOnly) => DOMRectReadOnly
+
+function checkVisibility(el: Element, adjust: RectAdjuster): boolean {
+	if (!el.checkVisibility()) return false
+	const rect = el.getBoundingClientRect()
+	if (rect.width === 0 || rect.height === 0) return false
+	if (isSrOnly(rect, adjust)) return false
+
+	const style = getComputedStyle(el)
+
+	return !(
+		style.visibility === 'hidden' ||
+		parseInt(style.opacity) === 0 ||
+		style.clip === 'rect(0px, 0px, 0px, 0px)'
+	)
+}
+
+function relativeTo(offset: { x: number; y: number }): RectAdjuster {
+	const { x, y } = offset
+	return (rect: DOMRectReadOnly) => {
+		return new DOMRectReadOnly(
+			rect.x - x,
+			rect.y - y,
+			rect.width,
+			rect.height,
+		)
+	}
+}
+
+function isSrOnly(rect: DOMRect, adjust: RectAdjuster): boolean {
+	rect = adjust(rect)
+	return (
+		rect.right < 0 ||
+		rect.bottom < 0 ||
+		rect.left > document.documentElement.scrollWidth ||
+		rect.top > document.documentElement.scrollHeight
+	)
 }
 
 let ranges: Range[] = []
@@ -265,7 +305,9 @@ const cssLoaded = Promise.all(
 )
 
 // delegate focus to input
-elements.textareaOuter.addEventListener('click', () => elements.textarea.focus())
+for (const eventName of ['click', 'mousedown'] as const) {
+	elements.textareaOuter.addEventListener(eventName, () => elements.textarea.focus())
+}
 
 function keydownWhileOpenHandler(e: KeyboardEvent) {
 	const shortkeyConfig = (['close', 'matchCase', 'wholeWord', 'useRegex', 'normalizeDiacritics'] as const)
