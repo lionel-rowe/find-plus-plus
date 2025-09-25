@@ -2,13 +2,13 @@
 
 body {
 	/* Override the injected stylesheet, which sets `font-size` at `75%` for some reason. */
-	/* Not sure where these styles come from as chrome dev tools just says "injected stylesheet" */
-	font-family: unset;
-	font-size: unset;
+	/* https://stackoverflow.com/questions/73162179/what-is-the-stylesheet-injected-by-chrome-in-local-extension-pages */
+	font-family: inherit;
+	font-size: inherit;
 
 	display: block;
 	max-width: 80ch;
-	margin: 3em auto;
+	margin: 2em auto;
 	padding: 0 0.5em;
 }
 
@@ -50,7 +50,7 @@ button {
 	padding: var(--padding-y) var(--padding-x);
 	border-radius: var(--border-radius);
 	cursor: pointer;
-	min-width: 5em;
+	min-width: 6em;
 	min-height: var(--height);
 	display: inline-flex;
 	align-items: center;
@@ -85,7 +85,7 @@ input:is([type='text'], [type='number'], :not([type])) {
 .fields {
 	display: flex;
 	flex-direction: column;
-	gap: 1em;
+	gap: 0.6em 1.5em;
 
 	label {
 		font-weight: bold;
@@ -98,7 +98,7 @@ input:is([type='text'], [type='number'], :not([type])) {
 	.label {
 		input {
 			&[type='number'] {
-				max-width: 3em;
+				max-width: 5em;
 			}
 			&:is([type='text'], :not([type])) {
 				width: 12em;

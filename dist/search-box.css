@@ -6,6 +6,9 @@
 }
 
 :host {
+	/* override some stylebot styles (TODO: is there a better way?) */
+	line-height: initial !important;
+
 	/* regex syntax highlighting */
 	--syntax-RegExpLiteral: lightslategray;
 

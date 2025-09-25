@@ -2,7 +2,6 @@
 	/* prevent inherited styles from affecting component */
 	all: initial;
 
-	box-sizing: border-box;
 	color-scheme: dark;
 
 	--rem: 16px;
@@ -31,6 +30,10 @@
 	}
 }
 
+*, *::before, *::after {
+	box-sizing: border-box;
+}
+
 pre, code, kbd, samp {
 	font-family: var(--code-font);
 }
@@ -44,7 +47,7 @@ pre, code, kbd, samp {
 	cursor: text;
 	font-size-adjust: cap-height 0.6;
 	line-height: 1;
-	font-size: 1em;
+	min-height: 1.8em;
 }
 
 .flags:not([hidden]) {
