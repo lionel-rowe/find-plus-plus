@@ -26,6 +26,13 @@ if (isIframe) {
 	setupMain()
 }
 
+document.addEventListener(PuppeteerTestEvent.TYPE, async () => {
+	await handleMessage({
+		kind: 'command',
+		command: '_execute_action',
+	})
+})
+
 function setupMain() {
 	chrome.runtime.onMessage.addListener(handleMessage)
 	document.addEventListener(OpenOptionsPageEvent.TYPE, (e) => {

@@ -41,3 +41,7 @@ export class CommandEvent extends AppEvent<{ command: Command }> {
 export class CloseEvent extends AppEvent {
 	static override readonly TYPE = namespaced('close')
 }
+
+export class PuppeteerTestEvent extends AppEvent {
+	static override readonly TYPE = namespaced('puppeteer-test')
+}

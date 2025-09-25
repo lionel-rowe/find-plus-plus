@@ -3,6 +3,7 @@ import { extname, join } from '@std/path'
 import { format } from '@std/fmt/bytes'
 import { cyan, gray } from '@std/fmt/colors'
 import { _prefix } from '../src/_prefix.ts'
+import { serveDemo } from './serveDemo.ts'
 
 const IN_DIR = 'src'
 const OUT_DIR = 'dist'
@@ -74,7 +75,10 @@ const buildJs = debounce(async () => {
 }, DEBOUNCE_MS)
 
 buildJs()
-if (!IS_PROD) await watch()
+if (!IS_PROD) {
+	serveDemo()
+	await watch()
+}
 
 async function watch() {
 	for await (const event of Deno.watchFs(IN_DIR)) {

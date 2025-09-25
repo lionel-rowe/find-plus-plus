@@ -1,4 +1,4 @@
-import { escapeHtml } from './utils.ts'
+import { escapeHtml, ExpandRecursively } from './utils.ts'
 
 // TODO: collocate different forms of keys together and document properly ("normalized", "pretty", "combo", etc.)
 
@@ -47,6 +47,7 @@ function recapitalize(s: string) {
 
 // https://superuser.com/questions/1238062/key-combination-order
 const bareEventModifiers = ['ctrl', 'alt', 'shift', 'meta'] as const
+type EventModifier = typeof eventModifiers[number]
 const eventModifiers = Object.fromEntries(bareEventModifiers.map((k) => [k, `${k}Key` as const]))
 const normalizedEventModifiers = bareEventModifiers.map((k) => {
 	const x = recapitalize(k)

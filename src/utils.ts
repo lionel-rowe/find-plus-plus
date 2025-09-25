@@ -11,3 +11,7 @@ export function roundTo(n: number, digits: number, strategy: Strategy = 'round')
 	const factor = 10 ** digits
 	return Math[strategy](n * factor) / factor
 }
+
+export type ExpandRecursively<T> = T extends object
+	? T extends infer O ? { [K in keyof O]: ExpandRecursively<O[K]> } : never
+	: T
