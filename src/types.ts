@@ -6,7 +6,7 @@ type ShortkeyConfig = {
 	description: string
 }
 
-type Flag = 'matchCase' | 'wholeWord' | 'useRegex' | 'normalizeDiacritics'
+export type Flag = 'matchCase' | 'wholeWord' | 'useRegex' | 'normalizeDiacritics'
 type Action = 'close'
 
 type FlagConfig = {

@@ -1,14 +1,22 @@
 import './types.d.ts'
-import { assert, assertEquals } from '@std/assert'
-import { comboToPretty, eventMatchesCombo, eventToCombo, type KbdEvent, platform } from './shortkeys.ts'
+import { assert, assertEquals, assertThrows } from '@std/assert'
+import {
+	comboToEventLike,
+	comboToPretty,
+	eventMatchesCombo,
+	eventToCombo,
+	type KbdEvent,
+	platform,
+} from './shortkeys.ts'
 import { stubProperty } from '@std/testing/unstable-stub-property'
 
 type Test = {
 	combo: string
-	event: KbdEvent
+	event: Partial<KbdEvent>
 	apple?: string
 	windows?: string
 	variants?: string[]
+	isSoloModifier?: boolean
 }
 
 const tests: Test[] = [
@@ -18,13 +26,6 @@ const tests: Test[] = [
 		apple: 'Z',
 		windows: 'Z',
 		variants: ['Z'],
-	},
-	{
-		event: { key: 'Z' },
-		combo: 'z',
-		apple: 'Z',
-		windows: 'Z',
-		variants: ['z'],
 	},
 	{
 		event: { key: 'Tab' },
@@ -40,6 +41,13 @@ const tests: Test[] = [
 		combo: 'Plus',
 		apple: '"+"',
 		windows: '"+"',
+	},
+	{
+		event: { key: 'ArrowRight' },
+		combo: 'ArrowRight',
+		apple: '→',
+		windows: '→',
+		variants: ['arrowright', 'ARROWRIGHT'],
 	},
 	{
 		event: { key: '-', shiftKey: true },
@@ -62,7 +70,7 @@ const tests: Test[] = [
 		variants: ['space+ctrl'],
 	},
 	{
-		event: { key: 'z', ctrlKey: true, shiftKey: true },
+		event: { key: 'Z', ctrlKey: true, shiftKey: true },
 		combo: 'Control+Shift+Z',
 		apple: 'Control+Shift+Z',
 		windows: 'Ctrl+Shift+Z',
@@ -80,12 +88,14 @@ const tests: Test[] = [
 		combo: 'Control',
 		windows: 'Ctrl',
 		variants: ['ctrl'],
+		isSoloModifier: true,
 	},
 	{
 		event: { key: 'Control', ctrlKey: true, shiftKey: true },
 		combo: 'Control+Shift',
 		windows: 'Ctrl+Shift',
 		variants: ['shift+CONTROL'],
+		isSoloModifier: true,
 	},
 ]
 
@@ -106,29 +116,48 @@ Deno.test(comboToPretty.name, async (t) => {
 		})
 	}
 })
+
 Deno.test(eventToCombo.name, async (t) => {
 	for (const test of tests) {
 		await t.step(test.combo ?? 'null', () => {
-			assertEquals(eventToCombo(test.event), test.combo)
+			assertEquals(eventToCombo(hydrateEvent(test.event)), test.combo)
 		})
 	}
 })
-Deno.test(eventMatchesCombo.name, async (t) => {
-	assert(
-		eventMatchesCombo({ key: 'a', ctrlKey: true }, 'Ctrl+A'),
-	)
 
+Deno.test(eventMatchesCombo.name, async (t) => {
 	for (const test of tests) {
-		const { combo } = test
-		if (combo == null) continue
+		const event = hydrateEvent(test.event)
 		await t.step(test.combo ?? 'null', () => {
-			assert(eventMatchesCombo(test.event, combo))
-			assert(!eventMatchesCombo(test.event, 'Alt+Z'))
+			const { combo } = test
+			assert(eventMatchesCombo(event, combo))
+			assert(!eventMatchesCombo(event, 'Alt+Z'))
+			if (test.isSoloModifier) {
+				assertThrows(() => comboToEventLike(combo))
+			} else {
+				assertEquals(comboToEventLike(combo), event)
+			}
 		})
-		for (const altCombo of test.variants ?? []) {
-			await t.step(`${test.combo} ~= ${altCombo}`, () => {
-				assert(eventMatchesCombo(test.event, altCombo))
+		for (const combo of test.variants ?? []) {
+			await t.step(`${test.combo} ~= ${combo}`, () => {
+				assert(eventMatchesCombo(event, combo))
+				if (test.isSoloModifier) {
+					assertThrows(() => comboToEventLike(combo))
+				} else {
+					assertEquals(comboToEventLike(combo), event)
+				}
 			})
 		}
 	}
 })
+
+function hydrateEvent(partial: Partial<KbdEvent>): KbdEvent {
+	return {
+		key: '',
+		altKey: false,
+		ctrlKey: false,
+		metaKey: false,
+		shiftKey: false,
+		...partial,
+	}
+}

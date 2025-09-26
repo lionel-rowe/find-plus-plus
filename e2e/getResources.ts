@@ -1,27 +1,15 @@
-import { delay } from '@std/async/delay'
+import { _prefix } from '../src/_prefix.ts'
 import puppeteer from 'puppeteer'
 import { serveDemo } from '../scripts/serveDemo.ts'
+import { comboToEventLike } from '../src/shortkeys.ts'
+import manifest from '../dist/manifest.json' with { type: 'json' }
 
-async function keyChord(page: puppeteer.Page, keys: readonly puppeteer.KeyInput[]) {
-	const stack: puppeteer.KeyInput[] = [...keys]
-	for (const key of stack) {
-		console.log('key down', key)
-		await delay(100)
-		await page.keyboard.down(key)
-	}
-	while (stack.length) {
-		console.log('key up', stack[stack.length - 1])
-		await delay(100)
-		await page.keyboard.up(stack.pop()!)
-	}
-}
+export type Resources = Awaited<ReturnType<typeof getResources>>
 
 export async function getResources() {
 	const server = serveDemo()
-	// server.unref()
-	const demoUrl = new URL(
-		`http://${server.addr.hostname}:${server.addr.port}`,
-	)
+
+	const demoUrl = new URL(`http://${server.addr.hostname}:${server.addr.port}`)
 
 	const width = 1000
 	const height = 600
@@ -33,7 +21,21 @@ export async function getResources() {
 		enableExtensions: true,
 	})
 
+	const cleanup = async () => {
+		await Promise.all([
+			browser.close(),
+			server.shutdown(),
+		])
+	}
+
+	browser.on('disconnected', cleanup)
+
 	const extensionId = await browser.installExtension('./dist')
+	// deno-lint-ignore no-explicit-any
+	void ((globalThis as any).APP_NS = _prefix + extensionId)
+	const { PuppeteerTestEvent } = await import('../src/events.ts')
+	const config = await import('../src/config.ts')
+	const { defaultOptions } = config
 
 	const page = (await browser.pages())[0]!
 	await page.emulateMediaFeatures([{ name: 'prefers-color-scheme', value: 'dark' }])
@@ -41,9 +43,35 @@ export async function getResources() {
 		page.waitForNavigation(),
 		page.goto(demoUrl.href),
 	])
-	// await page.click('body') // focus page
 
 	await page.bringToFront()
 
-	return { browser, page, server, extensionId }
+	const openCombo = manifest.commands._execute_action.suggested_key.default
+	const openEvent = comboToEventLike(openCombo)
+
+	await page.evaluate(
+		(type, openEvent) => {
+			// extension commands don't seem to work natively in puppeteer, so we simulate one
+			window.addEventListener('keydown', (e) => {
+				if (Object.entries(openEvent).every(([k, v]) => e[k as keyof typeof openEvent] === v)) {
+					e.preventDefault()
+					document.dispatchEvent(new CustomEvent(type))
+				}
+			})
+		},
+		PuppeteerTestEvent.TYPE,
+		openEvent,
+	)
+
+	return {
+		browser,
+		page,
+		server,
+		extensionId,
+		options: defaultOptions,
+		config,
+		manifest,
+
+		[Symbol.asyncDispose]: cleanup,
+	}
 }

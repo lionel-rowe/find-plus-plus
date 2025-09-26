@@ -1,5 +1,5 @@
 import { assert } from '@std/assert/assert'
-import { AppOptions } from './types.ts'
+import type { AppOptions } from './types.ts'
 
 class NamespacedIdsMap extends Map<string, `${typeof APP_NS}_${string}`> {
 	override get<K extends string>(key: K) {

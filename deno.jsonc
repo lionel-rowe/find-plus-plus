@@ -4,7 +4,8 @@
 	"tasks": {
 		"start": "deno run -A scripts/build.ts",
 		"build": "PROD=1 deno run -A scripts/build.ts",
-		"test": "deno test"
+		"test": "deno test src",
+		"e2e": "deno test -A e2e"
 	},
 	"imports": {
 		"@eslint-community/regexpp": "npm:@eslint-community/regexpp@^4.12.1",

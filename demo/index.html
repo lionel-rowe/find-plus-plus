@@ -23,17 +23,41 @@
 		<h1>Find++ Demo</h1>
 		<div class="content">
 			<section>
-				<p>
+				<p data-test-id="sample">
 					This is a sample paragraph to demonstrate the Find++ functionality. You can search for words like
 					"sample", "Find++", or any other text present in this content area.
 				</p>
-				<p>Try searching for "text", "search", or "highlight".</p>
-				<p>NFC: Các chương trình<br>NFD: Các chương trình</p>
+				<p data-test-id="case-sensitive">Case sensitivity: Sensitive SENSITIVE sensitive</p>
+				<p data-test-id="regex-syntax">Regex syntax: foo bar foo.bar</p>
+				<p>
+					<span data-test-id="nfc">NFC: Các chương trình</span>
+					<br>
+					<span data-test-id="nfd">NFD: Các chương trình</span>
+				</p>
+				<p data-test-id="element-boundary">Element boundaries: <strong>foo</strong>bar</p>
 				<textarea name="" id="">abc</textarea>
 				<input type="text" value="def">
 			</section>
+			<section style="height: 6em; overflow: auto">
+				<h2>Hidden elements</h2>
+				<p data-test-id="searchable0">This paragraph should be searchable0.</p>
+				<p style="display: none">This paragraph is hidden and should not be searchable1.</p>
+				<p style="visibility: hidden">This paragraph is invisible and should not be searchable2.</p>
+				<p style="opacity: 0">This paragraph is fully transparent and should not be searchable3.</p>
+				<p style="height: 0; overflow: hidden">This paragraph has no height and should not be searchable4.</p>
+				<p style="position: absolute; left: -9999px">
+					This paragraph is positioned off-screen and should not be searchable5.
+				</p>
+				<p style="width: 0; overflow: hidden">This paragraph has no width and should not be searchable6.</p>
+				<p style="clip: rect(0, 0, 0, 0); position: absolute">
+					This paragraph is clipped and should not be searchable7.
+				</p>
+				<p style="transform: scale(0)">This paragraph is scaled to zero and should not be searchable8.</p>
+				<p style="font-size: 0">This paragraph has zero font size and should not be searchable9.</p>
+			</section>
 			<!-- deno-fmt-ignore -->
 			<section>
+				<!-- smart white space handling - not implemented yet -->
 				<h2>White space</h2>
 				<p>one <span>two
 					</span> three<br>four
@@ -49,6 +73,7 @@
 				</table>
 			</section>
 			<section>
+				<!-- shadow dom matching - not implemented yet -->
 				<h2>Shadow DOM Example</h2>
 				<div>
 					<div id="foo">light dom</div>
@@ -70,29 +95,13 @@
 				</script>
 			</section>
 			<section>
+				<!-- iframe handling - not implemented yet -->
 				<h2>Iframe Example</h2>
 				<iframe
 					src="iframe.html"
 					style="width: 100%; height: 200px; border: 1px solid #ccc"
 					title="Find++ Iframe Demo"
 				></iframe>
-			</section>
-			<section>
-				<h2>hidden elements</h2>
-				<p>This paragraph should be searchable0.</p>
-				<p style="display: none">This paragraph is hidden and should not be searchable1.</p>
-				<p style="visibility: hidden">This paragraph is invisible and should not be searchable2.</p>
-				<p style="opacity: 0">This paragraph is fully transparent and should not be searchable3.</p>
-				<p style="height: 0; overflow: hidden">This paragraph has no height and should not be searchable4.</p>
-				<p style="position: absolute; left: -9999px">
-					This paragraph is positioned off-screen and should not be searchable5.
-				</p>
-				<p style="width: 0; overflow: hidden">This paragraph has no width and should not be searchable6.</p>
-				<p style="clip: rect(0, 0, 0, 0); position: absolute">
-					This paragraph is clipped and should not be searchable7.
-				</p>
-				<p style="transform: scale(0)">This paragraph is scaled to zero and should not be searchable8.</p>
-				<p style="font-size: 0">This paragraph has zero font size and should not be searchable9.</p>
 			</section>
 		</div>
 	</body>

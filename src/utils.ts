@@ -12,6 +12,5 @@ export function roundTo(n: number, digits: number, strategy: Strategy = 'round')
 	return Math[strategy](n * factor) / factor
 }
 
-export type ExpandRecursively<T> = T extends object
-	? T extends infer O ? { [K in keyof O]: ExpandRecursively<O[K]> } : never
+export type Expand<T> = T extends object ? T extends infer O ? { [K in keyof O]: Expand<O[K]> } : never
 	: T
