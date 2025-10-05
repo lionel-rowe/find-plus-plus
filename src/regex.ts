@@ -76,6 +76,10 @@ type RegexErrorResult = {
 
 export type RegexConfig = RegexSourceOnlyResult | RegexFullResult | RegexErrorResult
 
+function isEmpty(source: string, flagValues: Flags) {
+	return source === '' || (flagValues.useRegex && source === EMPTY_REGEX_SOURCE)
+}
+
 export function searchTermToRegexResult(searchTerm: string, flagValues: Flags): RegexConfig {
 	const m = searchTerm.match(REGEX_REGEX)
 	const normalizations: Normalization[] = []
@@ -89,7 +93,7 @@ export function searchTermToRegexResult(searchTerm: string, flagValues: Flags): 
 				kind: 'sourceOnly',
 				useRegex: flagValues.useRegex,
 				regex,
-				empty: regex.source === EMPTY_REGEX_SOURCE,
+				empty: isEmpty(searchTerm, flagValues),
 				normalizations,
 			}
 		}

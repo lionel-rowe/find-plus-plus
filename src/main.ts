@@ -11,7 +11,6 @@ import {
 import { modulo } from './utils.ts'
 import { assert } from '@std/assert/assert'
 import { elements } from './elements.ts'
-import { TextNodeOffsetWalker } from './textNodeOffset.ts'
 import { throttle } from '@std/async/unstable-throttle'
 import {
 	CheckReadyEvent,
@@ -21,7 +20,7 @@ import {
 	OpenOptionsPageEvent,
 	UpdateOptionsEvent,
 } from './events.ts'
-import { searchTermToRegexResult } from './regex.ts'
+import { type RegexConfig, searchTermToRegexResult } from './regex.ts'
 import type { AppOptions, Command } from './types.ts'
 import { type FlagName, getFlags, setFlagDefaults, updateShortkeyHints } from './flagForm.ts'
 import { RegexSyntaxHighlights, regexSyntaxHighlightTypes } from './syntaxHighlighting.ts'
@@ -32,8 +31,10 @@ import type { GetMatchesRequestData, Normalization } from './worker.ts'
 import { GetMatchesResponseData } from './worker.ts'
 import { isDomException } from '@li/is-dom-exception'
 import { eventMatchesCombo } from './shortkeys.ts'
-import { NormalizedMatcher } from '@li/irregex/matchers/normalized'
-import { normalizersFor } from './normalizers.ts'
+// import { NormalizedMatcher } from '@li/irregex/matchers/normalized'
+// import { normalizersFor } from './normalizers.ts'
+import { innerText } from './innerText.ts'
+import { checkVisibility, type VisibilityChecker } from './checkVisibility.ts'
 
 let options = defaultOptions
 
@@ -43,6 +44,11 @@ const shortKeyMap: Record<Command, (e: CommandEvent) => void> = {
 
 document.addEventListener(CommandEvent.TYPE, (e) => {
 	assert(e instanceof CommandEvent)
+	console.log(e.detail)
+	if (e.detail.isTest) {
+		// @ts-ignore globalThis
+		globalThis.innerText = innerText
+	}
 	shortKeyMap[e.detail.command](e)
 })
 
@@ -163,31 +169,51 @@ async function getRangesOrError(
 	regex: RegExp,
 	normalizations: Normalization[],
 ): Promise<Range[] | MismatchError | (DOMException & { name: 'AbortError' | 'TimeoutError' })> {
-	const text = element.textContent ?? ''
+	const innerTextResult = innerText(element)
+	const { text } = innerTextResult
 
 	const ranges: Range[] = []
 
-	const walker = new TextNodeOffsetWalker(element)
-	const adjust = relativeTo(document.documentElement.getBoundingClientRect())
+	const checkVisible = checkVisibility(document.documentElement.getBoundingClientRect())
 
 	try {
 		let i = 0
+		let cursor = 0
 		for await (
 			const { index, arr: [m] } of getMatches({ text, source: regex.source, flags: regex.flags, normalizations })
 		) {
-			const start = walker.next(index)
-			const end = walker.next(index + m.length)
-			// TODO: throw on other types of mismatch scenarios
-			if (start == null || end == null) {
+			const startNodeOffsetIncrement = innerTextResult.offsets.slice(cursor).findIndex((x) => x > index)
+			const startNodeOffsetIndex = Math.max(0, cursor + startNodeOffsetIncrement - 1)
+			const endIndex = index + m.length
+			const endNodeOffsetIncrement = innerTextResult.offsets.slice(startNodeOffsetIndex).findIndex((x) =>
+				x > endIndex
+			) - 1
+
+			if (endNodeOffsetIncrement < 0 || endNodeOffsetIncrement < 0) {
 				throw new MismatchError('Text node offset mismatch')
 			}
+
+			const endNodeOffsetIndex = startNodeOffsetIndex + endNodeOffsetIncrement
+			cursor = endNodeOffsetIndex
+
 			const range = new Range()
+
+			const start: [Text, number] = [
+				innerTextResult.nodes[startNodeOffsetIndex]!,
+				index - innerTextResult.offsets[startNodeOffsetIndex]!,
+			]
+			const end: [Text, number] = [
+				innerTextResult.nodes[endNodeOffsetIndex]!,
+				endIndex - innerTextResult.offsets[endNodeOffsetIndex]!,
+			]
+
 			range.setStart(...start)
 			range.setEnd(...end)
-			if (filter(range, m, adjust)) {
-				ranges.push(range)
-				if (++i === options.maxMatches) break
-			}
+
+			// if (filter(range, m, checkVisible)) {
+			ranges.push(range)
+			if (++i === options.maxMatches) break
+			// }
 		}
 	} catch (e) {
 		if (isDomException(e, 'AbortError', 'TimeoutError') || e instanceof MismatchError) {
@@ -199,98 +225,22 @@ async function getRangesOrError(
 	return ranges
 }
 
-function getRangesSync(
-	element: HTMLElement,
-	regex: RegExp,
-	normalizations: Normalization[],
-): Range[] {
-	const text = element.textContent ?? ''
+// const IGNORED_ELEMENT_SELECTOR = [
+// 	'script',
+// 	'style',
+// 	// TODO: Support `textarea` somehow? Currently doesn't work properly due to reading `textContent`/`innerText`,
+// 	// which doesn't update when `textarea`'s content is changed; additionally, `Range` objects don't work properly
+// 	// within `textarea`s, so impossible to highlight.
+// 	'textarea',
+// 	// TODO: Support `input` somehow? Same issues as `textarea`
+// 	'input',
+// ].join(', ')
 
-	const ranges: Range[] = []
-
-	const walker = new TextNodeOffsetWalker(element)
-	const adjust = relativeTo(document.documentElement.getBoundingClientRect())
-
-	if (normalizations.length) {
-		regex = new NormalizedMatcher({
-			matcher: regex,
-			normalizers: normalizersFor(normalizations),
-		}).asRegExp()
-	}
-
-	let i = 0
-	for (const { index, 0: m } of text.matchAll(regex)) {
-		const start = walker.next(index)
-		const end = walker.next(index + m.length)
-		assert(start != null && end != null)
-		const range = new Range()
-		range.setStart(...start)
-		range.setEnd(...end)
-
-		if (filter(range, m, adjust)) {
-			ranges.push(range)
-			if (++i === options.maxMatches) break
-		}
-	}
-
-	return ranges
-}
-
-const IGNORED_ELEMENT_SELECTOR = [
-	'script',
-	'style',
-	// TODO: Support `textarea` somehow? Currently doesn't work properly due to reading `textContent`/`innerText`,
-	// which doesn't update when `textarea`'s content is changed; additionally, `Range` objects don't work properly
-	// within `textarea`s, so impossible to highlight.
-	'textarea',
-	// TODO: Support `input` somehow? Same issues as `textarea`
-	'input',
-].join(', ')
-
-function filter(range: Range, text: string, adjust: RectAdjuster): boolean {
-	const el = getElementAncestor(range.commonAncestorContainer)
-	if (!/\S/.test(text)) return false
-	return !el.matches(IGNORED_ELEMENT_SELECTOR) && checkVisibility(el, adjust)
-}
-
-type RectAdjuster = (rect: DOMRectReadOnly) => DOMRectReadOnly
-
-function checkVisibility(el: Element, adjust: RectAdjuster): boolean {
-	if (!el.checkVisibility()) return false
-	const rect = el.getBoundingClientRect()
-	if (rect.width === 0 || rect.height === 0) return false
-	if (isSrOnly(rect, adjust)) return false
-
-	const style = getComputedStyle(el)
-
-	return !(
-		style.visibility === 'hidden' ||
-		parseInt(style.opacity) === 0 ||
-		style.clip === 'rect(0px, 0px, 0px, 0px)'
-	)
-}
-
-function relativeTo(offset: { x: number; y: number }): RectAdjuster {
-	const { x, y } = offset
-	return (rect: DOMRectReadOnly) => {
-		return new DOMRectReadOnly(
-			rect.x - x,
-			rect.y - y,
-			rect.width,
-			rect.height,
-		)
-	}
-}
-
-function isSrOnly(rect: DOMRect, adjust: RectAdjuster): boolean {
-	rect = adjust(rect)
-	return (
-		rect.right < 0 ||
-		rect.bottom < 0 ||
-		rect.left > document.documentElement.scrollWidth ||
-		rect.top > document.documentElement.scrollHeight
-	)
-}
+// function filter(range: Range, text: string, checkVisible: VisibilityChecker): boolean {
+// 	const el = getElementAncestor(range.commonAncestorContainer)
+// 	if (!/\S/.test(text)) return false
+// 	return !el.matches(IGNORED_ELEMENT_SELECTOR) && checkVisible(el)
+// }
 
 let ranges: Range[] = []
 let rangeIndex = 0
@@ -414,7 +364,7 @@ function setInfoDisplayState(state: InfoDisplayState) {
 function setRangeIndex(value: IndexSetter) {
 	if (!ranges.length) {
 		setInfoDisplayState('empty')
-		elements.infoMessage.textContent = elements.textarea.value ? 'No results' : ''
+		elements.infoMessage.textContent = 'No results'
 		CSS.highlights.delete(HIGHLIGHT_CURRENT_ID)
 		return
 	}
@@ -486,6 +436,7 @@ async function _updateSearch() {
 	if (result.kind === 'error') {
 		removeAllHighlights()
 		elements.infoMessage.textContent = result.error.message
+		elements.infoMessage.hidden = false
 		setInfoDisplayState('error')
 		return
 	}
@@ -493,8 +444,8 @@ async function _updateSearch() {
 	const { regex, kind, empty } = result
 
 	elements.textarea.title = isRegex ? regex?.toString() ?? '' : ''
-
 	elements.flags.hidden = kind === 'full'
+	elements.infoMessage.hidden = empty
 
 	if (isRegex && elements.textarea.textContent) {
 		const highlights = new RegexSyntaxHighlights(
@@ -520,23 +471,17 @@ async function _updateSearch() {
 		setInfoDisplayState('loading')
 	}, SHOW_SPINNER_TIMEOUT_MS)
 	rangesPromise.then(() => clearTimeout(loadingTimeout)).catch(() => clearTimeout(loadingTimeout))
-	const start = Date.now()
-	let r = await rangesPromise
-	errorHandler: if (Error.isError(r)) {
+	const r = await rangesPromise
+	if (Error.isError(r)) {
 		if (isDomException(r, 'AbortError')) {
 			// no-op
 			return
 		}
 		if (r instanceof MismatchError) {
-			const elapsed = Date.now() - start
-			if (elapsed > options.maxTimeout / 2) {
-				// most likely can't finish within timeout
-				r = new DOMException(undefined, 'TimeoutError')
-			} else {
-				// retry synchronously (error is likely due to DOM mutations during async operation)
-				r = getRangesSync(document.body, regex, result.normalizations)
-				break errorHandler
-			}
+			removeAllHighlights()
+			elements.infoMessage.textContent = 'Unable to match text'
+			setInfoDisplayState('error')
+			return
 		}
 
 		assert(isDomException(r, 'TimeoutError'))

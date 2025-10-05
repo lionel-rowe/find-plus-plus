@@ -34,7 +34,7 @@ export class OpenOptionsPageEvent extends AppEvent {
 	static override readonly TYPE = namespaced('open-options-page')
 }
 
-export class CommandEvent extends AppEvent<{ command: Command }> {
+export class CommandEvent extends AppEvent<{ command: Command; isTest?: boolean }> {
 	static override readonly TYPE = namespaced('command')
 }
 

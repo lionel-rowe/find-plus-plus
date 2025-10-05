@@ -19,7 +19,7 @@ type ErrorResult = {
 }
 type Result = SuccessResult | EmptyResult | ErrorResult
 export type TestCase = {
-	input: string | RegExp
+	input: string
 	flags: Flag[]
 	expect: Result
 }
@@ -46,7 +46,10 @@ export function runTestCase(resources: Resources) {
 			await delay(100)
 		}
 
-		await page.keyboard.type(input.toString(), { delay: 100 })
+		for (const [idx, line] of input.split('\n').entries()) {
+			if (idx) await keyChord(page, 'Ctrl+Enter')
+			await page.keyboard.type(line, { delay: 100 })
+		}
 
 		await delay(500)
 
@@ -57,15 +60,15 @@ export function runTestCase(resources: Resources) {
 
 				if (all == null || current == null) return { kind: 'empty' as const }
 
-				const serialize = (x: AbstractRange) => {
-					if (!(x instanceof Range)) throw new Error('Not a Range')
-					const { commonAncestorContainer } = x
+				const serialize = (range: AbstractRange) => {
+					if (!(range instanceof Range)) throw new Error('Not a Range')
+					const { commonAncestorContainer } = range
 					const container = commonAncestorContainer instanceof Element
 						? commonAncestorContainer
 						: commonAncestorContainer.parentElement
 					if (!(container instanceof HTMLElement)) throw new Error('Not an HTMLElement')
 					return {
-						text: x.toString(),
+						text: range.toString(),
 						parent: container.dataset.testId ?? '',
 					}
 				}

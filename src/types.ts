@@ -34,6 +34,7 @@ export type ShortKey = Command | Flag
 type CommandMessage = {
 	kind: 'command'
 	command: Command
+	isTest?: boolean
 }
 type OptionsUpdatedMessage = {
 	kind: 'optionsUpdated'

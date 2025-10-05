@@ -4,6 +4,7 @@ import { format } from '@std/fmt/bytes'
 import { cyan, gray } from '@std/fmt/colors'
 import { _prefix } from '../src/_prefix.ts'
 import { serveDemo } from './serveDemo.ts'
+import { delay } from '@std/async/delay'
 
 const IN_DIR = 'src'
 const OUT_DIR = 'dist'
@@ -40,7 +41,10 @@ const buildJs = debounce(async () => {
 
 		const outPath = join(OUT_DIR, fileName.replace(/\.ts$/, '.js'))
 
-		const { stdout } = await new Deno.Command(Deno.execPath(), { args, stdout: 'piped' }).spawn().output()
+		const { stdout, stderr } = await new Deno.Command(
+			Deno.execPath(),
+			{ args, stdout: 'piped', stderr: 'piped' },
+		).spawn().output()
 
 		const wrap: [string, string] = esm ? ['', ''] : ['{\n', '}\n']
 
@@ -64,14 +68,35 @@ const buildJs = debounce(async () => {
 
 		await Deno.writeFile(outPath, blob.stream())
 
+		if (stderr.length > 0) {
+			const lines = new TextDecoder().decode(stderr).split('\n')
+			for (const line of lines) {
+				if (line.includes('experimental')) continue
+				new Blob([line]).stream().pipeTo(
+					Deno.stderr.writable,
+					{ preventClose: true },
+				)
+			}
+		}
+
 		infos.push({ outPath, size: blob.size })
 	}
 	const filePathLen = Math.max(...infos.map(({ outPath }) => outPath.length))
 
-	// deno-lint-ignore no-console
-	console.info(
-		infos.map(({ outPath, size }) => `${cyan(outPath.padEnd(filePathLen))} ${gray(format(size))}`).join('\n'),
-	)
+	const total = infos.reduce((a, b) => a + b.size, 0)
+
+	const outLines = [
+		[],
+		...infos.map(({ outPath, size }) => [cyan(outPath.padEnd(filePathLen)), gray(format(size))]),
+		['Total size'.padEnd(filePathLen), format(total)],
+	]
+		.map((cols) => cols.join(' '.repeat(4)))
+
+	for (const line of outLines) {
+		await delay(10)
+		// deno-lint-ignore no-console
+		console.info(line)
+	}
 }, DEBOUNCE_MS)
 
 buildJs()

@@ -3,6 +3,7 @@ import { getResources } from './getResources.ts'
 import { delay } from '@std/async/delay'
 import { keyChord } from './puppeteerUtils.ts'
 import { runTestCase } from './runTestCase.ts'
+import dedent from 'string-dedent'
 
 Deno.test('e2e', async (t) => {
 	await using resources = await getResources()
@@ -33,6 +34,47 @@ Deno.test('e2e', async (t) => {
 			},
 		})
 	})
+
+	await t.step('white space handling', async () => {
+		const text = dedent`
+			one two three
+			four
+
+			flex item\\tflex item 2
+			table cell 1\\ttable cell 2
+			split text data
+			a b
+			a
+			b
+			end
+		`
+		await runCase({
+			input: text,
+			flags: ['useRegex'],
+			expect: {
+				kind: 'success',
+				matches: [
+					{ text, parent: 'white-space' },
+				],
+			},
+		})
+	})
+
+	await t.step('multiline ^$ handling', async () => {
+		const input = /^one two three$/.source
+		await runCase({
+			input,
+			flags: ['useRegex'],
+			expect: {
+				kind: 'success',
+				matches: [
+					{ text: 'one two three', parent: 'white-space' },
+				],
+			},
+		})
+	})
+
+	// ^one two three$
 
 	await t.step('match across element boundaries', async () => {
 		await runCase({

@@ -30,6 +30,7 @@ document.addEventListener(PuppeteerTestEvent.TYPE, async () => {
 	await handleMessage({
 		kind: 'command',
 		command: '_execute_action',
+		isTest: true,
 	})
 })
 

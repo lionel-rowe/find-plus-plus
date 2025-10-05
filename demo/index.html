@@ -34,7 +34,7 @@
 					<br>
 					<span data-test-id="nfd">NFD: Các chương trình</span>
 				</p>
-				<p data-test-id="element-boundary">Element boundaries: <strong>foo</strong>bar</p>
+				<p data-test-id="element-boundary">Element boundaries: <em>foo</em>bar</p>
 				<textarea name="" id="">abc</textarea>
 				<input type="text" value="def">
 			</section>
@@ -56,28 +56,39 @@
 				<p style="font-size: 0">This paragraph has zero font size and should not be searchable9.</p>
 			</section>
 			<!-- deno-fmt-ignore -->
-			<section>
+			<section id="white-space" data-test-id="white-space">
 				<!-- smart white space handling - not implemented yet -->
 				<h2>White space</h2>
-				<p>one <span>two
+				<p data-test-id="white-space-123">one <span>two
 					</span> three<br>four
 				</p>
 				<div style="display: flex; gap: 1em">
 					<div>flex item</div><div>flex item 2</div>
 				</div>
+				<script>42</script>
 				<table>
 					<tr>
 						<td>table cell 1</td>
 						<td>table cell 2</td>
 					</tr>
 				</table>
+				<div data-test-id="split-text">split text data</div>
+				<script>
+					document.querySelector('[data-test-id="split-text"]').firstChild.splitText(5)
+				</script>
+				<div >a&NewLine;b</div>
+				<div style="white-space: pre-wrap;">a&NewLine;b</div>
+				<div>a
+					b
+					c
+				</div>
 			</section>
 			<section>
 				<!-- shadow dom matching - not implemented yet -->
 				<h2>Shadow DOM Example</h2>
 				<div>
 					<div id="foo">light dom</div>
-					<custom-el><span slot="slot">shadow dom</span></custom-el>
+					<custom-el><span slot="slot">shadow dom 1 (slot)</span></custom-el>
 				</div>
 				<script>
 					customElements.define(
@@ -87,7 +98,13 @@
 								super()
 								this.attachShadow({ mode: 'open' }).append(Object.assign(
 									document.createElement('div'),
-									{ innerHTML: '<slot name="slot"></slot>' },
+									{
+										innerHTML: [
+											'<span>shadow dom 0</span>',
+											'<slot name="slot"></slot>',
+											'<span>shadow dom 2</span>',
+										].join(' '),
+									},
 								))
 							}
 						},
@@ -103,6 +120,27 @@
 					title="Find++ Iframe Demo"
 				></iframe>
 			</section>
+			<section>
+				<h2>Inline SVG</h2>
+				<svg width="200" height="100" xmlns="http://www.w3.org/2000/svg" style="background: cornflowerblue">
+					<text x="10" y="20" data-test-id="svg-text">SVG Text Example</text>
+					<text x="10" y="40">Another SVG Text</text>
+				</svg>
+			</section>
+
+			<script type="module">
+				// TODO remove
+				globalThis.DEBUG_MODE = true
+				const AppId = 'lddjcoaoinamjcajphiiekmifjckkpld'
+				document.dispatchEvent(
+					new CustomEvent(
+						`find-plus-plus-${AppId}_puppeteer-test`,
+					),
+				)
+				await new Promise((r) => setTimeout(r, 3000))
+				const t = innerText(document.getElementById('white-space'))
+				console.log(t.text)
+			</script>
 		</div>
 	</body>
 </html>
