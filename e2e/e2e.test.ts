@@ -91,7 +91,7 @@ Deno.test('e2e', async (t) => {
 
 	await t.step('flags', async (t) => {
 		await t.step('matchCase', async (t) => {
-			const input = 'Sensitive'
+			const input = 'LetterCase'
 			await t.step('true', async () => {
 				await runCase({
 					input,
@@ -99,7 +99,7 @@ Deno.test('e2e', async (t) => {
 					expect: {
 						kind: 'success',
 						matches: [
-							{ text: 'Sensitive', parent: 'case-sensitive' },
+							{ text: 'LetterCase', parent: 'case-sensitive' },
 						],
 					},
 				})
@@ -111,9 +111,9 @@ Deno.test('e2e', async (t) => {
 					expect: {
 						kind: 'success',
 						matches: [
-							{ text: 'Sensitive', parent: 'case-sensitive' },
-							{ text: 'SENSITIVE', parent: 'case-sensitive' },
-							{ text: 'sensitive', parent: 'case-sensitive' },
+							{ text: 'LetterCase', parent: 'case-sensitive' },
+							{ text: 'LETTERCASE', parent: 'case-sensitive' },
+							{ text: 'lettercase', parent: 'case-sensitive' },
 						],
 					},
 				})

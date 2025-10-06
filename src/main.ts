@@ -8,7 +8,6 @@ import {
 	HIGHLIGHT_TEXT_ID,
 	namespacedIds,
 } from './config.ts'
-import { modulo } from './utils.ts'
 import { assert } from '@std/assert/assert'
 import { elements } from './elements.ts'
 import { throttle } from '@std/async/unstable-throttle'
@@ -20,21 +19,17 @@ import {
 	OpenOptionsPageEvent,
 	UpdateOptionsEvent,
 } from './events.ts'
-import { type RegexConfig, searchTermToRegexResult } from './regex.ts'
+import { searchTermToRegexResult } from './regex.ts'
 import type { AppOptions, Command } from './types.ts'
 import { type FlagName, getFlags, setFlagDefaults, updateShortkeyHints } from './flagForm.ts'
 import { RegexSyntaxHighlights, regexSyntaxHighlightTypes } from './syntaxHighlighting.ts'
 import { trimBy } from '@std/text/unstable-trim-by'
-import { scrollIntoView } from './scrollToRange.ts'
-import { getElementAncestor } from './scrollParent.ts'
 import type { GetMatchesRequestData, Normalization } from './worker.ts'
 import { GetMatchesResponseData } from './worker.ts'
 import { isDomException } from '@li/is-dom-exception'
 import { eventMatchesCombo } from './shortkeys.ts'
-// import { NormalizedMatcher } from '@li/irregex/matchers/normalized'
-// import { normalizersFor } from './normalizers.ts'
 import { innerText } from './innerText.ts'
-import { checkVisibility, type VisibilityChecker } from './checkVisibility.ts'
+import { type IndexSetter, state } from './state.ts'
 
 let options = defaultOptions
 
@@ -44,7 +39,6 @@ const shortKeyMap: Record<Command, (e: CommandEvent) => void> = {
 
 document.addEventListener(CommandEvent.TYPE, (e) => {
 	assert(e instanceof CommandEvent)
-	console.log(e.detail)
 	if (e.detail.isTest) {
 		// @ts-ignore globalThis
 		globalThis.innerText = innerText
@@ -110,10 +104,12 @@ async function* getMatches(
 		'source' | 'flags' | 'text' | 'normalizations'
 	>,
 ) {
-	await workerRunnerReady
-	const reqNo = ++_reqNo
 	currentAc.abort()
 	currentAc = new AbortController()
+	const signal = AbortSignal.any([currentAc.signal, AbortSignal.timeout(options.maxTimeout)])
+	const reqNo = ++_reqNo
+
+	await workerRunnerReady
 
 	const { contentWindow, src } = elements.workerRunner
 	assert(contentWindow != null)
@@ -121,8 +117,6 @@ async function* getMatches(
 
 	const PAGE_SIZE = 500
 	let i = 0
-
-	const signal = AbortSignal.any([currentAc.signal, AbortSignal.timeout(options.maxTimeout)])
 
 	while (true) {
 		const message: GetMatchesRequestData = {
@@ -140,8 +134,10 @@ async function* getMatches(
 			Promise.race([
 				new Promise<GetMatchesResponseData>((res) =>
 					globalThis.addEventListener('message', (e) => {
-						if (e.data.kind === GET_MATCHES_RESPONSE && e.data.reqNo === reqNo) {
-							res(e.data)
+						if (e.data.kind === GET_MATCHES_RESPONSE) {
+							if (e.data.reqNo === reqNo) {
+								res(e.data)
+							}
 						}
 					}, { signal })
 				),
@@ -151,6 +147,7 @@ async function* getMatches(
 						(e) => rej(Error.isError(e.error) ? e.error : new Error(e.error)),
 						{ once: true, signal },
 					)
+					if (signal.aborted) rej(signal.reason)
 					signal.addEventListener('abort', () => rej(signal.reason))
 				}),
 			]),
@@ -173,8 +170,6 @@ async function getRangesOrError(
 	const { text } = innerTextResult
 
 	const ranges: Range[] = []
-
-	const checkVisible = checkVisibility(document.documentElement.getBoundingClientRect())
 
 	try {
 		let i = 0
@@ -210,10 +205,8 @@ async function getRangesOrError(
 			range.setStart(...start)
 			range.setEnd(...end)
 
-			// if (filter(range, m, checkVisible)) {
 			ranges.push(range)
 			if (++i === options.maxMatches) break
-			// }
 		}
 	} catch (e) {
 		if (isDomException(e, 'AbortError', 'TimeoutError') || e instanceof MismatchError) {
@@ -224,26 +217,6 @@ async function getRangesOrError(
 
 	return ranges
 }
-
-// const IGNORED_ELEMENT_SELECTOR = [
-// 	'script',
-// 	'style',
-// 	// TODO: Support `textarea` somehow? Currently doesn't work properly due to reading `textContent`/`innerText`,
-// 	// which doesn't update when `textarea`'s content is changed; additionally, `Range` objects don't work properly
-// 	// within `textarea`s, so impossible to highlight.
-// 	'textarea',
-// 	// TODO: Support `input` somehow? Same issues as `textarea`
-// 	'input',
-// ].join(', ')
-
-// function filter(range: Range, text: string, checkVisible: VisibilityChecker): boolean {
-// 	const el = getElementAncestor(range.commonAncestorContainer)
-// 	if (!/\S/.test(text)) return false
-// 	return !el.matches(IGNORED_ELEMENT_SELECTOR) && checkVisible(el)
-// }
-
-let ranges: Range[] = []
-let rangeIndex = 0
 
 const cssLoaded = Promise.all(
 	[...elements.container.shadowRoot!.querySelectorAll('link[rel=stylesheet]' as 'link')]
@@ -310,11 +283,9 @@ elements.textarea.addEventListener('keydown', (e) => {
 
 		if (e.ctrlKey) {
 			document.execCommand('insertText', false, '\n')
-		}
-
-		if (ranges.length) {
+		} else {
 			const inc = e.shiftKey ? -1 : 1
-			setRangeIndex((n) => n + inc)
+			state.updateRangeIndex((n) => n + inc)
 		}
 	} else {
 		const matched = eventMatchesCombo(e, 'Ctrl+A')
@@ -338,10 +309,8 @@ elements.info.addEventListener('click', (e) => {
 	const { setIndex } = button.dataset
 	assert(setIndex != null)
 
-	setRangeIndex(parseSetIndex(setIndex))
+	state.updateRangeIndex(parseSetIndex(setIndex))
 })
-
-type IndexSetter = number | ((n: number) => number)
 
 function parseSetIndex(str: string): IndexSetter {
 	if (/^[+-]?\d+$/.test(str)) return parseInt(str)
@@ -351,34 +320,6 @@ function parseSetIndex(str: string): IndexSetter {
 	const inc = m.groups.sign === '-' ? -value : value
 
 	return (n: number) => n + inc
-}
-
-type InfoDisplayState = typeof infoDisplayStates[number]
-const infoDisplayStates = ['loading', 'error', 'empty', 'ok'] as const
-function setInfoDisplayState(state: InfoDisplayState) {
-	for (const s of infoDisplayStates) {
-		elements.info.classList.toggle(s, s === state)
-	}
-}
-
-function setRangeIndex(value: IndexSetter) {
-	if (!ranges.length) {
-		setInfoDisplayState('empty')
-		elements.infoMessage.textContent = 'No results'
-		CSS.highlights.delete(HIGHLIGHT_CURRENT_ID)
-		return
-	}
-
-	setInfoDisplayState('ok')
-
-	rangeIndex = modulo(typeof value === 'function' ? value(rangeIndex) : value, ranges.length)
-	const range = ranges[rangeIndex]!
-
-	CSS.highlights.set(HIGHLIGHT_CURRENT_ID, new Highlight(range))
-
-	scrollIntoView(range)
-
-	elements.infoMessage.textContent = `${rangeIndex + 1} of ${ranges.length}`
 }
 
 const SHOW_SPINNER_TIMEOUT_MS = 200
@@ -420,7 +361,11 @@ function toggleFlag(name: FlagName) {
 	}
 }
 
+// TODO: remove this hack, as stale updates ought to already be prevented by abort signals in `getMatches`
+// however, current abort behavior is bugged so this is needed for now
+let currentUpdate = -1
 async function _updateSearch() {
+	const thisUpdate = ++currentUpdate
 	for (const name of regexSyntaxHighlightTypes) {
 		CSS.highlights.get(namespacedIds.get(name))!.clear()
 	}
@@ -434,10 +379,7 @@ async function _updateSearch() {
 	elements.textarea.classList.toggle('prose', !isRegex)
 
 	if (result.kind === 'error') {
-		removeAllHighlights()
-		elements.infoMessage.textContent = result.error.message
-		elements.infoMessage.hidden = false
-		setInfoDisplayState('error')
+		state.updateView({ kind: 'error', message: result.error.message })
 		return
 	}
 
@@ -445,7 +387,6 @@ async function _updateSearch() {
 
 	elements.textarea.title = isRegex ? regex?.toString() ?? '' : ''
 	elements.flags.hidden = kind === 'full'
-	elements.infoMessage.hidden = empty
 
 	if (isRegex && elements.textarea.textContent) {
 		const highlights = new RegexSyntaxHighlights(
@@ -459,7 +400,7 @@ async function _updateSearch() {
 	}
 
 	if (empty) {
-		removeAllHighlights()
+		state.updateView({ kind: 'void' })
 		return
 	}
 
@@ -467,45 +408,30 @@ async function _updateSearch() {
 	// only remove existing highlight & show loading spinner if results not retrieved within `SHOW_SPINNER_TIMEOUT_MS`
 	// to avoid unnecessary flicker
 	const loadingTimeout = setTimeout(() => {
-		removeAllHighlights()
-		setInfoDisplayState('loading')
+		state.updateView({ kind: 'loading' })
 	}, SHOW_SPINNER_TIMEOUT_MS)
 	rangesPromise.then(() => clearTimeout(loadingTimeout)).catch(() => clearTimeout(loadingTimeout))
-	const r = await rangesPromise
-	if (Error.isError(r)) {
-		if (isDomException(r, 'AbortError')) {
+	const ranges = await rangesPromise
+
+	if (thisUpdate !== currentUpdate) return
+
+	if (Error.isError(ranges)) {
+		if (isDomException(ranges, 'AbortError')) {
 			// no-op
 			return
 		}
-		if (r instanceof MismatchError) {
-			removeAllHighlights()
-			elements.infoMessage.textContent = 'Unable to match text'
-			setInfoDisplayState('error')
+		if (ranges instanceof MismatchError) {
+			state.updateView({ kind: 'error', message: 'Unable to match text' })
 			return
 		}
 
-		assert(isDomException(r, 'TimeoutError'))
+		assert(isDomException(ranges, 'TimeoutError'))
 
-		removeAllHighlights()
-		elements.infoMessage.textContent = 'Timed out'
-		setInfoDisplayState('error')
+		state.updateView({ kind: 'error', message: 'Timed out' })
 		return
 	}
 
-	ranges = r
-
-	setInfoDisplayState(ranges.length ? 'ok' : 'empty')
-	rangeIndex = 0
-
-	CSS.highlights.set(HIGHLIGHT_ALL_ID, new Highlight(...ranges))
-	setRangeIndex(0)
-}
-
-function removeAllHighlights() {
-	CSS.highlights.delete(HIGHLIGHT_ALL_ID)
-	ranges = []
-	rangeIndex = 0
-	setRangeIndex(0)
+	state.updateView({ kind: 'ok', ranges, currentIndex: 0 })
 }
 
 elements.optionsButton.addEventListener('click', () => {

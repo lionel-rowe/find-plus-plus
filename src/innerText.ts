@@ -1,10 +1,15 @@
 import { checkVisibility, type VisibilityChecker } from './checkVisibility.ts'
+import { OffsetMap } from '@li/irregex/matchers/normalized'
+import { binarySearch } from '@std/collections/unstable-binary-search'
 
 type InnerTextResult = {
-	/** All text nodes */
+	/** All relevant nodes */
 	nodes: Text[]
-	/** Offsets corresponding to the start of each of `nodes` within `text` (in UTF-16 code units) */
+	/** Offsets corresponding to indexes within `text` (in UTF-16 code units) */
 	offsets: number[]
+	/** Corresponding offsets within each `node` (in UTF-16 code units) */
+	offsetsWithin: number[]
+
 	// /** The resolved innerTexts of each of the `nodes` */
 	// texts: string[]
 	/** The resolved innerText (may differ somewhat from native `Element#innerText`) */
@@ -132,38 +137,43 @@ function serialize(token: Walken): string {
 export function innerText(el: Element): InnerTextResult {
 	const document = el.ownerDocument
 
-	const nodes: Text[] = []
-	const offsets: number[] = []
+	// const nodes: Text[] = []
+	// const offsets: number[] = []
 	// const texts: string[] = []
-	let text = ''
-	// const elementStack: Element[] = []
+	// let text = ''
 
-	// const update = (str: string, node?: Text) => {
-	// 	nodes.push(node ?? nodes.at(-1)!)
-	// 	offsets.push(str.length + (offsets.at(-1) ?? 0))
-	// 	texts.push(str)
-	// }
+	const result: InnerTextResult = {
+		text: '',
+		nodes: [],
+		offsets: [],
+		offsetsWithin: [],
+	}
 
-	// const checkVisible = checkVisibility(document.documentElement.getBoundingClientRect())
-	// const shouldIgnore = shouldIgnore_(checkVisible)
-	// const filter: NodeFilter = (node) => {
-	// 	if (!(node instanceof Element)) return NodeFilter.FILTER_ACCEPT
-	// 	return shouldIgnore(node) ? NodeFilter.FILTER_REJECT : NodeFilter.FILTER_ACCEPT
-	// }
-	const filter = () => NodeFilter.FILTER_ACCEPT
+	const update = (str: string, node: Text, offsetWithin = 0) => {
+		result.offsets.push(result.text.length)
+		result.text += str
+		result.nodes.push(node)
+		result.offsetsWithin.push(offsetWithin)
+	}
 
-	// const walker = document.createTreeWalker(el, NodeFilter.SHOW_ELEMENT | NodeFilter.SHOW_TEXT, filter)
+	const checkVisible = checkVisibility(document.documentElement.getBoundingClientRect())
+	const shouldIgnore = shouldIgnore_(checkVisible)
+	const filter: NodeFilter = (node) => {
+		if (!(node instanceof Element)) return NodeFilter.FILTER_ACCEPT
+		return shouldIgnore(node) ? NodeFilter.FILTER_REJECT : NodeFilter.FILTER_ACCEPT
+	}
 
 	let textNodeIndex = -1
 
 	for (const node of walk(el, filter)) {
-		debug(serialize(node))
+		// debug(serialize(node))
 		if (node instanceof Text) {
-			nodes.push(node)
+			// result.nodes.push(node)
 			// offsets.push(texts.length)
 			// texts.push(node.data)
-			offsets.push(text.length)
-			text += node.data
+			// offsets.push(text.length)
+			// text += node.data
+			update(node.data, node)
 		}
 	}
 
@@ -226,7 +236,7 @@ export function innerText(el: Element): InnerTextResult {
 
 	// const text = texts.join('')
 	// return { nodes, offsets, text, texts }
-	return { nodes, offsets, text }
+	return result
 }
 
 function getTrailingSpace(el: Element) {
