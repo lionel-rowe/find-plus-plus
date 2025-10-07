@@ -12,10 +12,10 @@ export function getElements() {
 
 	const textareaOuter = shadowRoot.querySelector('.textarea')
 	assert(textareaOuter instanceof HTMLElement)
-	const ce = shadowRoot.querySelector('[contenteditable]')
-	assert(ce instanceof HTMLElement)
+	const _textarea = shadowRoot.querySelector('[contenteditable]')
+	assert(_textarea instanceof HTMLElement)
 	const textarea = Object.defineProperty(
-		Object.assign(ce, { value: '' }),
+		Object.assign(_textarea, { value: '' }),
 		'value',
 		{
 			get() {

@@ -23,6 +23,8 @@
 		"@std/testing": "jsr:@std/testing@^1.0.15",
 		"@std/text": "jsr:@std/text@^1.0.16",
 		"@types/chrome": "npm:@types/chrome@^0.1.4",
+		"@types/jsdom": "npm:@types/jsdom@^27.0.0",
+		"jsdom": "npm:jsdom@^27.0.0",
 		"puppeteer": "npm:puppeteer@^24.22.3",
 		"string-dedent": "npm:string-dedent@^3.0.2"
 	},

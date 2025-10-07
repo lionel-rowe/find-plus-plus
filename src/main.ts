@@ -30,6 +30,7 @@ import { isDomException } from '@li/is-dom-exception'
 import { eventMatchesCombo } from './shortkeys.ts'
 import { innerText } from './innerText.ts'
 import { type IndexSetter, state } from './state.ts'
+import { findSorted, type Sorted } from './sorted.ts'
 
 let options = defaultOptions
 
@@ -177,33 +178,33 @@ async function getRangesOrError(
 		for await (
 			const { index, arr: [m] } of getMatches({ text, source: regex.source, flags: regex.flags, normalizations })
 		) {
-			const startNodeOffsetIncrement = innerTextResult.offsets.slice(cursor).findIndex((x) => x > index)
-			const startNodeOffsetIndex = Math.max(0, cursor + startNodeOffsetIncrement - 1)
-			const endIndex = index + m.length
-			const endNodeOffsetIncrement = innerTextResult.offsets.slice(startNodeOffsetIndex).findIndex((x) =>
-				x > endIndex
-			) - 1
-
-			if (endNodeOffsetIncrement < 0 || endNodeOffsetIncrement < 0) {
+			const offsets = innerTextResult.offsets as Sorted
+			const [_startNodeOffsetIndex] = findSorted(offsets, index, { start: cursor })
+			const startNodeOffsetIndex = _startNodeOffsetIndex < 0 ? ~_startNodeOffsetIndex : _startNodeOffsetIndex
+			if (startNodeOffsetIndex > innerTextResult.offsets.length - 1) {
 				throw new MismatchError('Text node offset mismatch')
 			}
 
-			const endNodeOffsetIndex = startNodeOffsetIndex + endNodeOffsetIncrement
+			const endIndex = index + m.length
+			const [_endNodeOffsetIndex] = findSorted(offsets, endIndex, { start: startNodeOffsetIndex })
+
+			const endNodeOffsetIndex = _endNodeOffsetIndex < 0 ? ~_endNodeOffsetIndex : _endNodeOffsetIndex
+			if (endNodeOffsetIndex > innerTextResult.offsets.length - 1) {
+				throw new MismatchError('Text node offset mismatch')
+			}
+
 			cursor = endNodeOffsetIndex
 
 			const range = new Range()
 
-			const start: [Text, number] = [
+			range.setStart(
 				innerTextResult.nodes[startNodeOffsetIndex]!,
-				index - innerTextResult.offsets[startNodeOffsetIndex]!,
-			]
-			const end: [Text, number] = [
+				innerTextResult.offsetsWithin[startNodeOffsetIndex]!,
+			)
+			range.setEnd(
 				innerTextResult.nodes[endNodeOffsetIndex]!,
-				endIndex - innerTextResult.offsets[endNodeOffsetIndex]!,
-			]
-
-			range.setStart(...start)
-			range.setEnd(...end)
+				innerTextResult.offsetsWithin[endNodeOffsetIndex]! + 1,
+			)
 
 			ranges.push(range)
 			if (++i === options.maxMatches) break

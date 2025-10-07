@@ -1,6 +1,4 @@
 import { checkVisibility, type VisibilityChecker } from './checkVisibility.ts'
-import { OffsetMap } from '@li/irregex/matchers/normalized'
-import { binarySearch } from '@std/collections/unstable-binary-search'
 
 type InnerTextResult = {
 	/** All relevant nodes */
@@ -36,11 +34,11 @@ const IGNORED_ELEMENTS = [
 	'input',
 ].map((s) => s.toUpperCase())
 
-function debug(...data: [string]) {
+function debug(fn: () => string): void {
 	// @ts-ignore globalThis
 	if (globalThis.DEBUG_MODE) {
 		// deno-lint-ignore no-console
-		console.debug(...data)
+		console.debug(fn())
 	}
 }
 
@@ -58,7 +56,7 @@ class TagEnd {
 }
 
 /**
- * Values yielded from {@linkcode walk}
+ * Walk tokens, i.e. tokens yielded from {@linkcode walk}
  *
  * ```text
  * ~~~;;;;;;;;;;_^_\!;;\^;>;>:TiuH+\v++.;2xT=+J\;^``.:)r^::::::^;;~~~~^^^^^""__,
@@ -137,11 +135,6 @@ function serialize(token: Walken): string {
 export function innerText(el: Element): InnerTextResult {
 	const document = el.ownerDocument
 
-	// const nodes: Text[] = []
-	// const offsets: number[] = []
-	// const texts: string[] = []
-	// let text = ''
-
 	const result: InnerTextResult = {
 		text: '',
 		nodes: [],
@@ -153,104 +146,103 @@ export function innerText(el: Element): InnerTextResult {
 		result.offsets.push(result.text.length)
 		result.text += str
 		result.nodes.push(node)
-		result.offsetsWithin.push(offsetWithin)
+		result.offsetsWithin.push(Math.min(offsetWithin, node.data.length))
 	}
 
 	const checkVisible = checkVisibility(document.documentElement.getBoundingClientRect())
-	const shouldIgnore = shouldIgnore_(checkVisible)
+	// const shouldIgnore = shouldIgnore_(checkVisible)
 	const filter: NodeFilter = (node) => {
-		if (!(node instanceof Element)) return NodeFilter.FILTER_ACCEPT
-		return shouldIgnore(node) ? NodeFilter.FILTER_REJECT : NodeFilter.FILTER_ACCEPT
+		// invisible due to dimensions, but we still want to include it
+		if (node instanceof Element) {
+			if (node.tagName === 'BR') return NodeFilter.FILTER_ACCEPT
+			return IGNORED_ELEMENTS.includes(node.tagName) || !checkVisible(node)
+				? NodeFilter.FILTER_REJECT
+				: NodeFilter.FILTER_ACCEPT
+		}
+
+		return NodeFilter.FILTER_ACCEPT
 	}
 
 	let textNodeIndex = -1
 
-	for (const node of walk(el, filter)) {
-		// debug(serialize(node))
-		if (node instanceof Text) {
-			// result.nodes.push(node)
-			// offsets.push(texts.length)
-			// texts.push(node.data)
-			// offsets.push(text.length)
-			// text += node.data
-			update(node.data, node)
+	for (const token of walk(el, filter)) {
+		debug(() => serialize(token))
+
+		if (token instanceof TagStart) {
+			textNodeIndex = -1
+
+			if (token.element.nodeName === 'BR') {
+				const prevTextNode = result.nodes.at(-1)
+
+				if (prevTextNode != null) {
+					update('\n', prevTextNode)
+				}
+
+				continue
+			}
+		} else if (token instanceof TagEnd) {
+			const prevTextNode = result.nodes.at(-1)
+
+			if (prevTextNode != null) {
+				update(getTrailingSpace(token.element), prevTextNode)
+			}
+		} else {
+			// assert(token instanceof Text)
+			++textNodeIndex
+
+			const collapseMode = getWhiteSpaceCollapseMode(token.parentElement ?? el)
+
+			const prevChar = result.text.at(-1) ?? ''
+			let nodeText = token.data
+
+			// we just exclude empty nodes from the result - no need to include
+			if (nodeText === '') continue
+
+			result.nodes.push(token)
+			result.offsets.push(result.text.length)
+
+			const getReplacement = (_s: string, i: number) => {
+				if (textNodeIndex === 0 && i === 0) return ''
+				return (nodeText === '' || (result.text === '' && i === 0)
+					? ''
+					: i === 0
+					? (/[ \t\r\n]/.test(prevChar) ? '' : ' ')
+					: ' ')
+			}
+			const replacer = (s: string, i: number) => {
+				const replacement = getReplacement(s, i)
+				if (s.length !== replacement.length) {
+					result.nodes.push(token)
+					result.offsets.push(result.text.length - s.length + replacement.length)
+				}
+				return replacement
+			}
+			if (collapseMode.space === 'collapse') {
+				nodeText = nodeText.replace(/[ \t]+/g, replacer)
+			}
+			if (collapseMode.breaks === 'collapse') {
+				nodeText = nodeText.replace(/[ \t]*[\r\n]+[ \t]*/g, replacer)
+			}
+
+			result.text += nodeText
 		}
 	}
 
-	// do {
-	// 	const node = walker.currentNode
-
-	// 	if (node instanceof Element) {
-	// 		textNodeIndex = -1
-
-	// 		if (node.nodeName === 'BR') {
-	// 			text += '\n'
-	// 			debug('<BR>')
-	// 			continue
-	// 		}
-
-	// 		elementStack.push(node)
-	// 		debug(`<${node.tagName}>`)
-	// 	} else if (node instanceof Text) {
-	// 		++textNodeIndex
-
-	// 		debug(JSON.stringify(node.data))
-
-	// 		const collapseMode = getWhiteSpaceCollapseMode(parent)
-
-	// 		const prevChar = text.at(-1) ?? ''
-	// 		let nodeText = node.data
-
-	// 		// we just exclude empty nodes from the result - no need to include
-	// 		if (nodeText === '') continue
-
-	// 		nodes.push(node)
-	// 		offsets.push(text.length)
-
-	// 		const getReplacement = (_s: string, i: number) => {
-	// 			if (textNodeIndex === 0 && i === 0) return ''
-	// 			return (nodeText === '' || (text === '' && i === 0)
-	// 				? ''
-	// 				: i === 0
-	// 				? (/[ \t\r\n]/.test(prevChar) ? '' : ' ')
-	// 				: ' ')
-	// 		}
-	// 		const replacer = (s: string, i: number) => {
-	// 			const replacement = getReplacement(s, i)
-	// 			if (s.length !== replacement.length) {
-	// 				nodes.push(node)
-	// 				offsets.push(text.length -s.length +replacement.length )
-	// 			}
-	// 			return replacement
-	// 		}
-	// 		if (collapseMode.space === 'collapse') {
-	// 			nodeText = nodeText.replace(/[ \t]+/g, replacer)
-	// 		}
-	// 		if (collapseMode.breaks === 'collapse') {
-	// 			nodeText = nodeText.replace(/[ \t]*[\r\n]+[ \t]*/g, replacer)
-	// 		}
-
-	// 		text += nodeText
-	// 	}
-	// } while (walker.nextNode())
-
-	// const text = texts.join('')
-	// return { nodes, offsets, text, texts }
 	return result
 }
 
+const DOUBLE_SPACED_TAG_NAMES = new Set(['P', 'H1', 'H2', 'H3', 'H4', 'H5', 'H6'])
 function getTrailingSpace(el: Element) {
 	const style = getComputedStyle(el)
 	const parent = el.parentElement
-	if (parent && getComputedStyle(parent).display === 'flex') {
+	if (parent != null && getComputedStyle(parent).display === 'flex') {
 		const { flexDirection } = style
-		if (flexDirection.includes('column')) return '\n'
-		return '\t'
+		return flexDirection.includes('column') ? '\n' : '\t'
 	}
 	const { display } = style
 	if (['table-cell', 'table-header-group'].includes(display)) return '\t'
 	if (['block', 'list-item', 'table', 'table-caption', 'table-row', 'flex'].includes(display)) {
-		return el.tagName === 'P' ? '\n\n' : '\n'
+		return DOUBLE_SPACED_TAG_NAMES.has(el.tagName) ? '\n\n' : '\n'
 	}
 	return ''
 }
@@ -258,12 +250,4 @@ function getTrailingSpace(el: Element) {
 // https://developer.mozilla.org/en-US/docs/Web/CSS/white-space-collapse
 function getWhiteSpaceCollapseMode(el: Element): WhiteSpaceCollapseMode {
 	return modes.get(getComputedStyle(el).whiteSpaceCollapse) ?? defaultMode
-}
-
-function shouldIgnore_(checkVisible: VisibilityChecker) {
-	return (el: Element) => {
-		// invisible due to dimensions, but we still want to include it
-		if (el.nodeName === 'BR') return false
-		return IGNORED_ELEMENTS.includes(el.tagName) || !checkVisible(el)
-	}
 }
