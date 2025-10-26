@@ -19,7 +19,7 @@ export function getElements() {
 		'value',
 		{
 			get() {
-				return this.innerText.replace(/\n$/, '')
+				return this.innerText.replaceAll('\r', '').replace(/\n$/, '')
 			},
 			set(value) {
 				this.innerText = value

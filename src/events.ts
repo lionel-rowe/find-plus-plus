@@ -42,6 +42,6 @@ export class CloseEvent extends AppEvent {
 	static override readonly TYPE = namespaced('close')
 }
 
-export class PuppeteerTestEvent extends AppEvent {
-	static override readonly TYPE = namespaced('puppeteer-test')
+export class InitTestEvent extends AppEvent {
+	static override readonly TYPE = namespaced('init-test')
 }

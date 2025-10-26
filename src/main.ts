@@ -28,9 +28,9 @@ import type { GetMatchesRequestData, Normalization } from './worker.ts'
 import { GetMatchesResponseData } from './worker.ts'
 import { isDomException } from '@li/is-dom-exception'
 import { eventMatchesCombo } from './shortkeys.ts'
-import { innerText } from './innerText.ts'
+import { InnerText, InnerTextRangeError } from '@li/inner-text'
 import { type IndexSetter, state } from './state.ts'
-import { findSorted, type Sorted } from './sorted.ts'
+// import { findSorted, type Sorted } from './sorted.ts'
 
 let options = defaultOptions
 
@@ -41,8 +41,9 @@ const shortKeyMap: Record<Command, (e: CommandEvent) => void> = {
 document.addEventListener(CommandEvent.TYPE, (e) => {
 	assert(e instanceof CommandEvent)
 	if (e.detail.isTest) {
-		// @ts-ignore globalThis
-		globalThis.innerText = innerText
+		// deno-lint-ignore no-explicit-any
+		const global = globalThis as any
+		global.InnerText = InnerText
 	}
 	shortKeyMap[e.detail.command](e)
 })
@@ -167,52 +168,28 @@ async function getRangesOrError(
 	regex: RegExp,
 	normalizations: Normalization[],
 ): Promise<Range[] | MismatchError | (DOMException & { name: 'AbortError' | 'TimeoutError' })> {
-	const innerTextResult = innerText(element)
-	const { text } = innerTextResult
+	const innerText = new InnerText(element)
 
 	const ranges: Range[] = []
 
 	try {
 		let i = 0
-		let cursor = 0
-		for await (
-			const { index, arr: [m] } of getMatches({ text, source: regex.source, flags: regex.flags, normalizations })
-		) {
-			const offsets = innerTextResult.offsets as Sorted
-			const [_startNodeOffsetIndex] = findSorted(offsets, index, { start: cursor })
-			const startNodeOffsetIndex = _startNodeOffsetIndex < 0 ? ~_startNodeOffsetIndex : _startNodeOffsetIndex
-			if (startNodeOffsetIndex > innerTextResult.offsets.length - 1) {
-				throw new MismatchError('Text node offset mismatch')
-			}
+		const matches = getMatches({
+			text: innerText.toString(),
+			source: regex.source,
+			flags: regex.flags,
+			normalizations,
+		})
 
-			const endIndex = index + m.length
-			const [_endNodeOffsetIndex] = findSorted(offsets, endIndex, { start: startNodeOffsetIndex })
+		for await (const { index, arr: [m] } of matches) {
+			ranges.push(innerText.range(index, index + m.length))
 
-			const endNodeOffsetIndex = _endNodeOffsetIndex < 0 ? ~_endNodeOffsetIndex : _endNodeOffsetIndex
-			if (endNodeOffsetIndex > innerTextResult.offsets.length - 1) {
-				throw new MismatchError('Text node offset mismatch')
-			}
-
-			cursor = endNodeOffsetIndex
-
-			const range = new Range()
-
-			range.setStart(
-				innerTextResult.nodes[startNodeOffsetIndex]!,
-				innerTextResult.offsetsWithin[startNodeOffsetIndex]!,
-			)
-			range.setEnd(
-				innerTextResult.nodes[endNodeOffsetIndex]!,
-				innerTextResult.offsetsWithin[endNodeOffsetIndex]! + 1,
-			)
-
-			ranges.push(range)
 			if (++i === options.maxMatches) break
 		}
 	} catch (e) {
-		if (isDomException(e, 'AbortError', 'TimeoutError') || e instanceof MismatchError) {
-			return e
-		}
+		if (e instanceof InnerTextRangeError) return new MismatchError(e.message)
+		if (isDomException(e, 'AbortError', 'TimeoutError')) return e
+
 		throw e
 	}
 
@@ -345,7 +322,7 @@ function onPaste(dt: DataTransfer | null): boolean {
 
 	for (const [mime, getText] of Object.entries(pastedTextConverters)) {
 		const val = dt.getData(mime)
-		if (val) return document.execCommand('insertText', false, trimBy(getText(val), /[\r\n]/))
+		if (val) return document.execCommand('insertText', false, trimBy(getText(val).replaceAll(/\r\n?/g, '\n'), '\n'))
 	}
 
 	return false

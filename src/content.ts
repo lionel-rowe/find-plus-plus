@@ -1,11 +1,5 @@
 import * as CONFIG from './config.ts'
-import {
-	CommandEvent,
-	NotifyReadyEvent,
-	OpenOptionsPageEvent,
-	PuppeteerTestEvent,
-	UpdateOptionsEvent,
-} from './events.ts'
+import { CommandEvent, InitTestEvent, NotifyReadyEvent, OpenOptionsPageEvent, UpdateOptionsEvent } from './events.ts'
 import { optionsStorage } from './storage.ts'
 import type { Message } from './types.ts'
 import { getHtml } from './populateTemplate.ts'
@@ -26,7 +20,7 @@ if (isIframe) {
 	setupMain()
 }
 
-document.addEventListener(PuppeteerTestEvent.TYPE, async () => {
+document.addEventListener(InitTestEvent.TYPE, async () => {
 	await handleMessage({
 		kind: 'command',
 		command: '_execute_action',

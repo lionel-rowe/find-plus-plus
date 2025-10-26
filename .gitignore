@@ -1,3 +1,4 @@
 .env
 /dist/*.js
 /src/_template.ts
+_junk

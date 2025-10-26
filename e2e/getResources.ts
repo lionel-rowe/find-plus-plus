@@ -10,6 +10,7 @@ export async function getResources() {
 	const server = serveDemo()
 
 	const demoUrl = new URL(`http://${server.addr.hostname}:${server.addr.port}`)
+	demoUrl.searchParams.set('e2e', '1')
 
 	const width = 1000
 	const height = 600
@@ -33,7 +34,7 @@ export async function getResources() {
 	const extensionId = await browser.installExtension('./dist')
 	// deno-lint-ignore no-explicit-any
 	void ((globalThis as any).APP_NS = _prefix + extensionId)
-	const { PuppeteerTestEvent } = await import('../src/events.ts')
+	const { InitTestEvent } = await import('../src/events.ts')
 	const config = await import('../src/config.ts')
 	const { defaultOptions } = config
 
@@ -59,7 +60,7 @@ export async function getResources() {
 				}
 			})
 		},
-		PuppeteerTestEvent.TYPE,
+		InitTestEvent.TYPE,
 		openEvent,
 	)
 

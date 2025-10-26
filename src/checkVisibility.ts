@@ -1,7 +1,5 @@
 type RectAdjuster = (rect: DOMRectReadOnly) => DOMRectReadOnly
 
-export type VisibilityChecker = (el: Element) => boolean
-
 export function checkVisibility(relativeToRect: DOMRectReadOnly) {
 	const adjust = relativeTo(relativeToRect)
 
