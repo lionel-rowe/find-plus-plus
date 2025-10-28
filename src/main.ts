@@ -28,9 +28,35 @@ import type { GetMatchesRequestData, Normalization } from './worker.ts'
 import { GetMatchesResponseData } from './worker.ts'
 import { isDomException } from '@li/is-dom-exception'
 import { eventMatchesCombo } from './shortkeys.ts'
-import { InnerText, InnerTextRangeError } from '@li/inner-text'
+import { InnerText, InnerTextRangeError, innerTextRegistry } from '@li/inner-text'
 import { type IndexSetter, state } from './state.ts'
 // import { findSorted, type Sorted } from './sorted.ts'
+
+const getRoot = () => document.body ?? document.documentElement
+
+function makeObserverConfig<T extends MutationObserver | ResizeObserver>(
+	getEl: () => Element,
+	observer: T,
+	observe: (observer: T, el: Element) => void,
+) {
+	return {
+		observe: () => observe(observer, getEl()),
+		disconnect: () => observer.disconnect(),
+	}
+}
+
+const observers = [
+	makeObserverConfig(
+		getRoot,
+		new MutationObserver(() => innerTextRegistry.markStale(getRoot())),
+		(x, root) => x.observe(root, { characterData: true, childList: true, subtree: true, attributes: true }),
+	),
+	makeObserverConfig(
+		getRoot,
+		new ResizeObserver(() => innerTextRegistry.markStale(getRoot())),
+		(x, root) => x.observe(root),
+	),
+]
 
 let options = defaultOptions
 
@@ -164,11 +190,10 @@ async function* getMatches(
 class MismatchError extends Error {}
 
 async function getRangesOrError(
-	element: HTMLElement,
 	regex: RegExp,
 	normalizations: Normalization[],
 ): Promise<Range[] | MismatchError | (DOMException & { name: 'AbortError' | 'TimeoutError' })> {
-	const innerText = new InnerText(element)
+	const innerText = innerTextRegistry.get(getRoot())
 
 	const ranges: Range[] = []
 
@@ -234,6 +259,8 @@ function keydownWhileOpenHandler(e: KeyboardEvent) {
 }
 
 async function open(_e: CommandEvent) {
+	for (const { observe } of observers) observe()
+
 	await cssLoaded
 
 	elements.container.hidden = false
@@ -245,6 +272,8 @@ async function open(_e: CommandEvent) {
 }
 
 function close() {
+	for (const { disconnect } of observers) disconnect()
+
 	elements.container.hidden = true
 	CSS.highlights.delete(HIGHLIGHT_ALL_ID)
 	CSS.highlights.delete(HIGHLIGHT_CURRENT_ID)
@@ -382,7 +411,7 @@ async function _updateSearch() {
 		return
 	}
 
-	const rangesPromise = getRangesOrError(document.body, regex, result.normalizations)
+	const rangesPromise = getRangesOrError(regex, result.normalizations)
 	// only remove existing highlight & show loading spinner if results not retrieved within `SHOW_SPINNER_TIMEOUT_MS`
 	// to avoid unnecessary flicker
 	const loadingTimeout = setTimeout(() => {

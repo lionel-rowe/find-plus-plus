@@ -144,10 +144,24 @@
 					// // TODO remove
 					// globalThis.DEBUG_MODE = true
 					const AppId = 'lddjcoaoinamjcajphiiekmifjckkpld'
+
+					const p = Promise.withResolvers()
+					Object.defineProperty(globalThis, 'InnerText', {
+						configurable: true,
+						set(v) {
+							delete globalThis.InnerText
+							globalThis.InnerText = v
+							p.resolve()
+						},
+					})
+
 					document.dispatchEvent(new CustomEvent(`find-plus-plus-${AppId}_init-test`))
-					await new Promise((r) => setTimeout(r, 3000))
-					const t = new InnerText(document.getElementById('white-space'))
-					console.log(t.text)
+
+					await p.promise
+					console.time(InnerText.name)
+					const t = new InnerText(document.body)
+					console.log(t)
+					console.timeEnd(InnerText.name)
 				}
 			</script>
 		</div>
