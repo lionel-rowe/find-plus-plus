@@ -71,7 +71,9 @@ async function handleMessage(message: Message) {
 }
 
 async function initialize(root: Element, html: string) {
-	root.insertAdjacentHTML('beforeend', html)
+	const doc = new DOMParser().parseFromString(html, 'text/html')
+	root.append(...doc.head.children, ...doc.body.children)
+
 	const el = document.createElement(CUSTOM_ELEMENT_NAME)
 	el.hidden = true
 	root.append(el)

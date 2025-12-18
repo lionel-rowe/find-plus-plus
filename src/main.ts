@@ -28,9 +28,11 @@ import type { GetMatchesRequestData, Normalization } from './worker.ts'
 import { GetMatchesResponseData } from './worker.ts'
 import { isDomException } from '@li/is-dom-exception'
 import { eventMatchesCombo } from './shortkeys.ts'
-import { InnerText, InnerTextRangeError, innerTextRegistry } from '@li/inner-text'
+import { InnerText, InnerTextRangeError, InnerTextRegistry } from '@li/inner-text'
 import { type IndexSetter, state } from './state.ts'
 // import { findSorted, type Sorted } from './sorted.ts'
+
+const innerTextRegistry = new InnerTextRegistry()
 
 const getRoot = () => document.body ?? document.documentElement
 
@@ -65,10 +67,10 @@ const shortKeyMap: Record<Command, (e: CommandEvent) => void> = {
 }
 
 document.addEventListener(CommandEvent.TYPE, (e) => {
+	// deno-lint-ignore no-explicit-any
+	const global = globalThis as any
 	assert(e instanceof CommandEvent)
 	if (e.detail.isTest) {
-		// deno-lint-ignore no-explicit-any
-		const global = globalThis as any
 		global.InnerText = InnerText
 	}
 	shortKeyMap[e.detail.command](e)
