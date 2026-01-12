@@ -6,6 +6,7 @@ import { getHtml } from './populateTemplate.ts'
 import { waitForElement } from './waitForElement.ts'
 import { WORKER_RUNNER_ID } from './config.ts'
 import { assert } from '@std/assert/assert'
+import { promiseAllKeyed } from './utils.ts'
 
 const { defaultOptions, ...ids } = CONFIG
 const { CUSTOM_ELEMENT_NAME } = ids
@@ -49,10 +50,15 @@ async function handleMessage(message: Message) {
 				// set true before awaiting anything to ensure `initialize` only run once
 				ready.initialized = true
 
-				// On legacy sites, `document.body` can also be a `<frameset>` 😲
-				// https://stackoverflow.com/questions/35297274/why-is-document-body-not-a-htmlbodyelement
-				const [root, html] = await Promise.all([waitForElement(() => document.body), getHtml()])
-				await initialize(root, html)
+				await initialize(
+					await promiseAllKeyed({
+						head: waitForElement(() => document.head),
+						// In reality, on legacy sites, `document.body` can also be a `<frameset>` 🤯
+						// https://stackoverflow.com/questions/35297274/why-is-document-body-not-a-htmlbodyelement
+						body: waitForElement(() => document.body as HTMLBodyElement),
+						html: getHtml(),
+					}),
+				)
 				ready.resolve()
 				ready.finalized = true
 			}
@@ -70,13 +76,14 @@ async function handleMessage(message: Message) {
 	}
 }
 
-async function initialize(root: Element, html: string) {
+async function initialize({ head, body, html }: { head: HTMLHeadElement; body: HTMLBodyElement; html: string }) {
 	const doc = new DOMParser().parseFromString(html, 'text/html')
-	root.append(...doc.head.children, ...doc.body.children)
+	head.append(...doc.head.children)
+	body.append(...doc.body.children)
 
 	const el = document.createElement(CUSTOM_ELEMENT_NAME)
 	el.hidden = true
-	root.append(el)
+	body.append(el)
 
 	const iframe = document.createElement('iframe')
 	iframe.src = chrome.runtime.getURL('/worker-runner.html')
@@ -96,7 +103,7 @@ async function initialize(root: Element, html: string) {
 				res()
 			}, { once: true })
 		),
-		root.append(script, iframe),
+		body.append(script, iframe),
 	])
 
 	document.dispatchEvent(new UpdateOptionsEvent({ options }))

@@ -14,3 +14,14 @@ export function roundTo(n: number, digits: number, strategy: Strategy = 'round')
 
 export type Expand<T> = T extends object ? T extends infer O ? { [K in keyof O]: Expand<O[K]> } : never
 	: T
+
+type AwaitedProperties<T> = { [K in keyof T]: Awaited<T[K]> }
+export async function promiseAllKeyed<T extends Record<string, unknown>>(obj: T): Promise<AwaitedProperties<T>> {
+	const keys = Object.keys(obj)
+	const values = await Promise.all(Object.values(obj))
+	const resObj: Record<string, unknown> = Object.create(null)
+	for (let i = 0; i < keys.length; ++i) {
+		resObj[keys[i]] = values[i]
+	}
+	return resObj as AwaitedProperties<T>
+}
